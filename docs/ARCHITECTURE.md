@@ -118,6 +118,40 @@ Canonical request path:
 6. Coordinator synthesizes final response.
 7. Runtime state, trace records, and report artifacts remain queryable.
 
+### 6.1 User Ask State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Queued: user submit /api/team/ask/<agent_id>
+    Queued --> Routing: orchestrator route + plan
+    Routing --> Executing: assign to role agents
+    Executing --> RiskReview: risk reviewer checks
+    RiskReview --> AuditReview: audit reviewer challenge
+    AuditReview --> Synthesis: coordinator aggregation
+    Synthesis --> Completed: final answer persisted
+
+    Executing --> OvertimePending: timeout reached
+    OvertimePending --> Executing: user choose continue\n/api/team/session/<sid>/overtime
+    OvertimePending --> Stopped: user choose stop\n/api/team/session/<sid>/overtime
+
+    Queued --> Stopped: global stop /api/team/stop_all_work
+    Routing --> Stopped: global stop /api/team/stop_all_work
+    Executing --> Stopped: global stop /api/team/stop_all_work
+    RiskReview --> Stopped: global stop /api/team/stop_all_work
+    AuditReview --> Stopped: global stop /api/team/stop_all_work
+
+    Routing --> Failed: unrecoverable runtime error
+    Executing --> Failed: tool/model failure
+    RiskReview --> Failed: unrecoverable runtime error
+    AuditReview --> Failed: unrecoverable runtime error
+    Synthesis --> Failed: unrecoverable runtime error
+
+    Completed --> [*]
+    Failed --> [*]
+    Stopped --> [*]
+```
+
 ## 7. Control and Governance Surfaces
 
 | Capability | Endpoint |
@@ -140,7 +174,8 @@ These APIs are first-class architecture features, not auxiliary debug helpers.
 |---|---|---|
 | Responsibility boundary | Implicit | Explicit role decomposition |
 | Process observability | Limited | Activity stream + trace endpoints |
-| Runtime control | Weak interruption semantics | Start/stop/global-stop surfaces |
+| Runtime controllability | Fragmented controls with weak policy gates | Workflow config + overtime governance + global-stop control surfaces |
+| Compliance and audit evidence | Limited native audit hooks | Tool catalog/source/review APIs + trace/report evidence chain |
 | Memory transparency | Often opaque | Memory center API |
 | Tool governance | Fragmented wrappers | Registry + source review + audit flow |
 | Visual workflow | Mostly text | 3D workspace + structured status panels |
