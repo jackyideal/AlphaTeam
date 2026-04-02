@@ -137,7 +137,7 @@ pip install -r requirements.txt
 - `SECRET_KEY`
 - `TUSHARE_TOKEN`
 - `QWEN_API_KEY`
-- `MOONSHOT_API_KEY`（建议，用于联网搜索链路）
+- `MOONSHOT_API_KEY`
 
 启动服务：
 
