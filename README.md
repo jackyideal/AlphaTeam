@@ -18,7 +18,8 @@
 AlphaTeam 是基于我们前期学术开源项目 **[AlphaFin](https://github.com/AlphaFin-proj/AlphaFin)** 的工业级进阶版本。
 
 * **[AlphaFin](https://github.com/AlphaFin-proj/AlphaFin) (前身):** 侧重于金融高质量数据集的构建、大模型微调以及初步的单体 Chain-of-Thought (CoT) 推理探索，旨在解决金融数据时效性与计算复杂性的基础问题。
-* **AlphaTeam (当前):** 在 AlphaFin 积累的金融直觉与数据底座之上，全面升级为**多智能体协作 (Multi-Agent Collaboration)** 与**系统化工程治理**架构。实现了从“单点问答”到“复杂流水线编排”，从“静态数据驱动”向“动态辩论与因果驱动”的跨越。
+  
+* **[AlphaTeam] :** 在 AlphaFin 积累的金融直觉与数据底座之上，全面升级为**多智能体协作** 与**系统化工程治理**架构。完成了从“启发式的单体问答” 向 “具备可信，可控，可进化的量化投研框架”的跨越。
 ---
 
 ## 💡 核心理念 
