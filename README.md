@@ -139,26 +139,7 @@ python3 -m AlphaFin.scripts.build_db --mode full --include-fina
 | 生命周期控制 | `/api/team/module/start`, `/api/team/module/stop`, `/api/team/stop_all_work` |
 | 超时治理 | `/api/team/session/<session_id>/overtime` |
 
-## Security and Data Governance
 
-- 仓库不包含本地运行数据库、历史会话、运行轨迹等私有数据。
-- 通过 `.gitignore` 屏蔽 `*.db`、trace、报告等运行态产物。
-- API key 与 token 统一由环境变量注入，不在代码中明文提交。
-
-推送前建议执行：
-
-```bash
-rg -n "sk-[A-Za-z0-9]{16,}|TUSHARE_TOKEN\\s*=\\s*'|API_KEY\\s*=\\s*'" AlphaFin
-```
-
-## Optional External Dependencies
-
-以下指标依赖外部目录，不属于本仓库主体：
-
-- `ind_21_agent_strategy` 依赖 `STOCKAGENT_DIR`（默认 `third_party/stockagent`）
-- `ind_22_fin_evolver` 依赖 `FIN_EVOLVER_DIR`（默认 `third_party/Evolve_Fin/script`）
-
-缺少上述目录不会阻塞 AlphaTeam 主流程，但对应指标不可用。
 
 ## Non-goals
 
