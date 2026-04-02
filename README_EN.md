@@ -109,6 +109,14 @@ Full specification: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Summary:
 - Team 3D Scene: `AlphaFin/ai_team/static/js/three_scene.js`
 - DB Build Script: `AlphaFin/scripts/build_db.py`
 
+
+## 📊 Indicator and Strategy Coverage (Brief)
+
+- The current open-source release includes `25` runnable indicator/strategy modules across four groups: `Capital Flow (7)`, `Macro and Valuation (7)`, `Market Structure (7)`, and `Strategy Models (4)`.
+- Current `Strategy Models` include: `Industry Rotation`, `Quality Stock Screening`, `Agent Collaborative Strategy`, and `Master Stock-Picking Strategies`.
+- Indicators follow a unified registry and loading path: auto-discovered by `indicator_registry`, and served/rendered through `/indicator/<indicator_id>`.
+- The design goal is that each indicator is independently usable while remaining auditable, reviewable, and reproducible in AlphaTeam workflows.
+
 ## Quick Start
 
 ```bash
