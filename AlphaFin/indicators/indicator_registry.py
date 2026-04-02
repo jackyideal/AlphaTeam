@@ -14,6 +14,10 @@ import threading
 REGISTRY = {}  # {indicator_id: {meta + _module_name}}
 _MODULE_CACHE = {}  # {_module_name: module}
 _MODULE_LOCK = threading.Lock()
+_EXCLUDED_INDICATOR_IDS = {
+    'ind_22_fin_evolver',
+    'ind_27_logicfin',
+}
 
 
 def _extract_meta_from_file(fpath):
@@ -66,6 +70,8 @@ def _discover():
         indicator_id = meta.get('id')
         if not indicator_id:
             print(f'[WARNING] 指标 {mod_name} 缺少 id，已跳过')
+            continue
+        if indicator_id in _EXCLUDED_INDICATOR_IDS:
             continue
 
         item = dict(meta)
