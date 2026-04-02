@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}大师选股策略{% endblock %}
+
+{% block content %}
+<div class="stock-page">
+    <!-- 标题区 -->
+    <div class="stock-header">
+        <h1>大师选股策略</h1>
+        <p class="indicator-desc">集成9位投资大师的经典选股策略 · 基于最新财务与估值数据筛选优质标的</p>
+    </div>
+
+    <!-- 数据加载区 -->
+    <div class="input-card">
+        <div class="input-section">
+            <button id="btn-load-data" class="btn btn-primary" onclick="loadMasterData()">
+                加载全市场数据
+            </button>
+            <span id="load-status" style="margin-left:12px; font-size:14px; color:var(--text-secondary, #64748b);"></span>
+        </div>
+    </div>
+
+    <!-- 进度条 -->
+    <div id="load-progress" class="progress-section" style="display:none;">
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        </div>
+        <p class="progress-text" id="progress-text">准备中...</p>
+    </div>
+
+    <!-- 策略选择区 -->
+    <div id="strategy-cards" class="master-strategy-cards" style="display:none;">
+        <h2 class="section-title">选择策略</h2>
+        <div id="strategy-grid" class="strategy-grid"></div>
+    </div>
+
+    <!-- 历史回测区 -->
+    <div id="backtest-section" class="fina-section" style="display:none;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+            <h2 class="section-title" style="margin-bottom:0;">策略历史回测</h2>
+            <button id="btn-backtest" class="btn btn-primary" onclick="runBacktest()">运行回测（3年季度调仓）</button>
+            <span id="backtest-status" style="font-size:14px; color:var(--text-secondary, #64748b);"></span>
+        </div>
+        <div id="backtest-progress" class="progress-section" style="display:none;">
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="backtest-progress-bar" style="width:0%"></div>
+            </div>
+            <p class="progress-text" id="backtest-progress-text">准备中...</p>
+        </div>
+        <div id="backtest-chart" style="width:100%; height:500px; display:none;"></div>
+    </div>
+
+    <!-- 筛选结果 -->
+    <div id="result-section" class="fina-section" style="display:none;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+            <h2 class="section-title" id="result-title" style="margin-bottom:0;">筛选结果</h2>
+            <span id="result-count" style="font-size:14px; color:var(--text-secondary, #64748b);"></span>
+        </div>
+        <div class="fina-table-wrapper">
+            <table id="result-table" class="fina-table"></table>
+        </div>
+    </div>
+</div>
+
+<style>
+.strategy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.strategy-card {
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--bg-card, #fff);
+    border: 2px solid var(--border, #e2e8f0);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.strategy-card:hover {
+    border-color: var(--primary, #1a6ddb);
+    box-shadow: 0 4px 12px rgba(26,109,219,0.15);
+    transform: translateY(-2px);
+}
+.strategy-card.active {
+    border-color: var(--primary, #1a6ddb);
+    background: rgba(26,109,219,0.06);
+    box-shadow: 0 4px 12px rgba(26,109,219,0.2);
+}
+.strategy-card .card-name {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text, #1e293b);
+}
+.strategy-card .card-desc {
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+    line-height: 1.5;
+}
+.strategy-card .card-count {
+    font-size: 13px;
+    margin-top: 8px;
+    color: var(--primary, #1a6ddb);
+    font-weight: 600;
+    display: none;
+}
+.strategy-card.computed .card-count { display: block; }
+.strategy-card .card-spinner {
+    display: none;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+}
+.strategy-card.computing .card-spinner { display: block; }
+.strategy-card.computing { opacity: 0.7; pointer-events: none; }
+
+/* 可点击的股票代码链接 */
+.fina-table td a.stock-link {
+    color: var(--primary, #1a6ddb);
+    text-decoration: none;
+    font-weight: 600;
+}
+.fina-table td a.stock-link:hover {
+    text-decoration: underline;
+}
+
+[data-theme="dark"] .strategy-card {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+[data-theme="dark"] .strategy-card:hover,
+[data-theme="dark"] .strategy-card.active {
+    border-color: var(--primary);
+    background: rgba(26,109,219,0.1);
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/static/js/master_strategies.js?v={{ asset_version }}"></script>
+{% endblock %}

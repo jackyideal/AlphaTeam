@@ -1,0 +1,14 @@
+Flask>=2.2,<3.0
+requests>=2.31
+openai>=1.0
+pandas>=1.5
+numpy>=1.24
+SQLAlchemy>=1.4
+tushare>=1.2.89
+matplotlib>=3.7
+akshare>=1.12
+tqdm>=4.66
+Pillow>=10.0
+seaborn>=0.13
+yfinance>=0.2
+scikit-learn>=1.3

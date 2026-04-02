@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}ML 涨跌预测{% endblock %}
+
+{% block content %}
+<div class="stock-page">
+    <div class="stock-header">
+        <h1>🧪 ML 涨跌预测</h1>
+        <p class="indicator-desc">多模型集成 · 时序验证 · 次日方向概率</p>
+    </div>
+
+    <div class="input-card">
+        <div class="input-section">
+            <div class="input-group">
+                <label for="ml-stock-code">股票代码</label>
+                <input type="text" id="ml-stock-code" value="600425.SH" placeholder="如 600425.SH">
+            </div>
+            <div class="input-group">
+                <label for="ml-start-date">起始日期</label>
+                <input type="date" id="ml-start-date" value="2016-01-01" min="2000-01-01" max="2026-12-31">
+            </div>
+            <div class="input-group">
+                <label for="ml-th-up">看多阈值</label>
+                <input type="number" id="ml-th-up" value="0.58" min="0.50" max="0.90" step="0.01">
+            </div>
+            <div class="input-group">
+                <label for="ml-th-down">看空阈值</label>
+                <input type="number" id="ml-th-down" value="0.42" min="0.10" max="0.50" step="0.01">
+            </div>
+            <div class="input-group">
+                <label for="ml-min-train">最小训练样本</label>
+                <input type="number" id="ml-min-train" value="360" min="180" max="1500" step="20">
+            </div>
+            <button id="btn-ml-run" class="btn btn-primary" onclick="runStockMlPredict()">开始预测</button>
+        </div>
+        <div class="ml-option-row">
+            <div class="ml-option-title">启用模型</div>
+            <div class="ml-model-switch" id="ml-model-switch">
+                <label class="ml-model-chip"><input type="checkbox" value="logistic" checked> Logistic</label>
+                <label class="ml-model-chip"><input type="checkbox" value="rf" checked> RandomForest</label>
+                <label class="ml-model-chip"><input type="checkbox" value="extra_trees" checked> ExtraTrees</label>
+                <label class="ml-model-chip"><input type="checkbox" value="gbdt" checked> GBDT</label>
+                <label class="ml-model-chip"><input type="checkbox" value="adaboost" checked> AdaBoost</label>
+                <label class="ml-model-chip"><input type="checkbox" value="hgb" checked> HistGBDT(若环境支持)</label>
+            </div>
+        </div>
+        <div class="ml-option-row">
+            <label class="ml-auto-toggle">
+                <input type="checkbox" id="ml-auto-threshold" checked>
+                自动优化阈值（基于历史 OOS 表现）
+            </label>
+        </div>
+    </div>
+
+    <div id="ml-status" class="stock-data-status" style="display:none;"></div>
+    <div id="ml-progress-wrap" class="ml-progress-wrap">
+        <div class="ml-progress-head">
+            <span id="ml-progress-text">等待开始预测...</span>
+            <span id="ml-progress-time">预计剩余：--</span>
+        </div>
+        <div class="progress-bar-container">
+            <div id="ml-progress-bar" class="progress-bar" style="width:0%;"></div>
+        </div>
+    </div>
+    <div id="ml-summary" class="ml-summary-grid" style="display:none;"></div>
+
+    <div class="ml-grid">
+        <div class="ml-panel">
+            <h3 class="ml-panel-title">模型表现与权重</h3>
+            <div class="fina-table-wrapper">
+                <table id="ml-model-table" class="fina-table"></table>
+            </div>
+        </div>
+        <div class="ml-panel">
+            <h3 class="ml-panel-title">关键特征贡献（集成后）</h3>
+            <div id="ml-feature-chart" class="stock-chart-container" style="height:420px;"></div>
+        </div>
+    </div>
+
+    <div class="ml-panel">
+        <h3 class="ml-panel-title">滚动回测：策略净值 vs 基准净值（最近260日）</h3>
+        <div id="ml-backtest-chart" class="stock-chart-container" style="height:460px;"></div>
+    </div>
+
+    <div class="ml-panel">
+        <h3 class="ml-panel-title">最近信号明细（最近30条）</h3>
+        <div class="fina-table-wrapper">
+            <table id="ml-recent-table" class="fina-table"></table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/static/js/stock_ml.js?v={{ asset_version }}"></script>
+{% endblock %}

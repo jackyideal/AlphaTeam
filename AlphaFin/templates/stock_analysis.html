@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}个股通用分析{% endblock %}
+
+{% block content %}
+<div class="stock-page">
+    <!-- 标题区 -->
+    <div class="stock-header">
+        <h1>📈 个股通用分析</h1>
+        <p class="indicator-desc">多因子回测 基本面分析 成本压力分析</p>
+    </div>
+
+    <!-- 输入区 -->
+    <div class="input-card">
+        <div class="input-section">
+            <div class="input-group">
+                <label for="stock-code">股票代码</label>
+                <input type="text" id="stock-code" value="600425.SH" placeholder="如 600425.SH">
+            </div>
+            <div class="input-group">
+                <label for="stock-start-date">起始日期</label>
+                <input type="date" id="stock-start-date" value="2020-01-01" min="2010-01-01" max="2026-12-31">
+            </div>
+            <button id="btn-stock-query" class="btn btn-primary" onclick="loadStockData()">
+                查询
+            </button>
+        </div>
+    </div>
+    <div id="stock-data-status" class="stock-data-status" style="display:none;"></div>
+
+    <!-- 九转信号提示 -->
+    <div id="nineturn-alert" class="nineturn-alert" style="display:none;"></div>
+
+    <!-- 实时信息面板 -->
+    <div id="stock-info-panel" class="stock-info-panel" style="display:none;"></div>
+
+    <!-- 新闻资讯 -->
+    <div id="news-section" style="display:none;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+            <h2 class="section-title" style="margin-bottom:0;">新闻资讯</h2>
+            <button class="btn btn-primary" onclick="loadNewsData()" id="btn-news-load">加载新闻</button>
+            <span id="news-loading" style="display:none; color:var(--text-secondary, #64748b); font-size:13px;">
+                AI 正在搜索新闻，请稍候...
+            </span>
+        </div>
+        <div id="news-panels" style="display:none;">
+            <div class="news-grid">
+                <div class="news-card" id="news-industry_policy">
+                    <div class="news-card-header" onclick="toggleNewsCard('industry_policy')">
+                        <h3>行业与政策动态</h3>
+                        <span class="news-toggle">▼</span>
+                    </div>
+                    <div class="news-card-body" id="news-body-industry_policy"></div>
+                </div>
+                <div class="news-card" id="news-company_announcements">
+                    <div class="news-card-header" onclick="toggleNewsCard('company_announcements')">
+                        <h3>公司公告</h3>
+                        <span class="news-toggle">▼</span>
+                    </div>
+                    <div class="news-card-body" id="news-body-company_announcements"></div>
+                </div>
+                <div class="news-card" id="news-company_news">
+                    <div class="news-card-header" onclick="toggleNewsCard('company_news')">
+                        <h3>公司相关新闻</h3>
+                        <span class="news-toggle">▼</span>
+                    </div>
+                    <div class="news-card-body" id="news-body-company_news"></div>
+                </div>
+                <div class="news-card" id="news-world_events">
+                    <div class="news-card-header" onclick="toggleNewsCard('world_events')">
+                        <h3>世界大事</h3>
+                        <span class="news-toggle">▼</span>
+                    </div>
+                    <div class="news-card-body" id="news-body-world_events"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 股票走势 -->
+    <h2 class="section-title" id="chart-section-title" style="display:none;">股票走势</h2>
+
+    <!-- 频率切换 -->
+    <div class="freq-btn-group" id="freq-btns" style="display:none;">
+        <button class="freq-btn active" data-freq="D" onclick="switchFreq('D', this)">日线</button>
+        <button class="freq-btn" data-freq="W" onclick="switchFreq('W', this)">周线</button>
+        <button class="freq-btn" data-freq="M" onclick="switchFreq('M', this)">月线</button>
+    </div>
+
+    <!-- K线主图（含成交量 + MACD + KDJ + CCI） -->
+    <div id="kline-chart" class="stock-chart-container" style="display:none; height:900px;"></div>
+
+    <!-- 估值分析 -->
+    <div id="valuation-section" style="display:none;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+            <h2 class="section-title" style="margin-bottom:0;">估值分析（PE / PS / PB / 总市值）</h2>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <label style="font-size:13px; color:var(--text-secondary, #64748b);">滚动窗口：</label>
+                <select id="valuation-window" onchange="renderValuationCharts()" style="padding:4px 10px; border-radius:6px; border:1px solid var(--border, #e2e8f0); background:var(--bg-card, #fff); color:var(--text, #1e293b); font-size:13px;">
+                    <option value="60">60日（3个月）</option>
+                    <option value="120">120日（半年）</option>
+                    <option value="252" selected>252日（1年）</option>
+                    <option value="504">504日（2年）</option>
+                </select>
+            </div>
+        </div>
+        <div id="valuation-chart" class="stock-chart-container" style="height:650px;"></div>
+    </div>
+
+    <!-- 内在价值估算 -->
+    <div id="intrinsic-section" style="display:none;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+            <h2 class="section-title" style="margin-bottom:0;">内在价值估算（RI / DCF / Graham / 估值锚）</h2>
+            <div class="intrinsic-params">
+                <div class="input-group">
+                    <label>折现率(%)</label>
+                    <input type="number" id="iv-discount" value="10" min="4" max="20" step="0.1" onchange="renderIntrinsicValuation()">
+                </div>
+                <div class="input-group">
+                    <label>预测年限</label>
+                    <input type="number" id="iv-years" value="5" min="3" max="10" step="1" onchange="renderIntrinsicValuation()">
+                </div>
+                <div class="input-group">
+                    <label>国债收益率(%)</label>
+                    <input type="number" id="iv-bond-yield" value="3.0" min="1" max="8" step="0.1" onchange="renderIntrinsicValuation()">
+                </div>
+                <div class="input-group">
+                    <label>增长上限(%)</label>
+                    <input type="number" id="iv-growth-cap" value="8" min="2" max="20" step="0.5" onchange="renderIntrinsicValuation()">
+                </div>
+                <div class="input-group">
+                    <label>安全边际(%)</label>
+                    <input type="number" id="iv-margin" value="25" min="5" max="60" step="1" onchange="renderIntrinsicValuation()">
+                </div>
+                <button class="btn btn-primary" onclick="renderIntrinsicValuation()">重新估算</button>
+            </div>
+        </div>
+        <div id="intrinsic-status" class="stock-data-status level-ok" style="display:none;"></div>
+        <div id="intrinsic-cards" class="intrinsic-summary-grid"></div>
+        <div id="intrinsic-chart" class="stock-chart-container" style="height:420px;"></div>
+        <div class="fina-table-wrapper" style="margin-bottom:12px;">
+            <table id="intrinsic-table" class="fina-table"></table>
+        </div>
+        <div class="intrinsic-note">
+            <div class="intrinsic-note-title">方法说明</div>
+            <div>1. RI（剩余收益）: 以内生净资产与 ROE-折现率 的超额收益折现估值，并加入持续系数避免终值失真。</div>
+            <div>2. DCF（FCFE口径）: 以每股自由现金流折现估值，若缺失则回退 OCFPS/EPS 估算。</div>
+            <div>3. Graham: 以 EPS 与长期增速估算保守内在价值。</div>
+            <div>4. 估值锚: 结合历史 PE/PB 分位映射价格区间，用于交叉校验。</div>
+            <div>5. 增长上限存在“有效值”：会受折现率约束（状态栏会显示 输入/有效）。</div>
+            <div>6. 以上结果仅供研究参考，不构成投资建议。</div>
+        </div>
+    </div>
+
+    <!-- 筹码分布分析 -->
+    <div id="cyq-section" style="display:none;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+            <h2 class="section-title" style="margin-bottom:0;">筹码分布与胜率分析</h2>
+            <button class="btn btn-primary" onclick="loadCyqData()" id="btn-cyq-load">加载筹码数据</button>
+        </div>
+        <div id="cyq-data-status" class="stock-data-status" style="display:none;"></div>
+
+        <!-- 横向筹码分布图（最新一天） -->
+        <div id="cyq-dist-chart" class="stock-chart-container" style="height:420px; display:none;"></div>
+
+        <!-- 时序面积图（成本分位 + 胜率） -->
+        <div id="cyq-timeline-chart" class="stock-chart-container" style="height:720px; display:none;"></div>
+
+        <!-- 胜率回测 -->
+        <div id="cyq-backtest-section" style="display:none;">
+            <h3 style="font-size:16px; margin:20px 0 12px;">胜率驱动回测</h3>
+            <div class="backtest-params">
+                <button class="btn btn-primary" onclick="runCyqAutoSearch()" id="btn-cyq-auto">自动搜索最优参数</button>
+                <div class="input-group">
+                    <label>买入胜率阈值(%)</label>
+                    <input type="number" id="cyq-buy-thresh" value="10" min="1" max="50" step="1" style="width:80px;">
+                </div>
+                <div class="input-group">
+                    <label>卖出胜率阈值(%)</label>
+                    <input type="number" id="cyq-sell-thresh" value="80" min="50" max="99" step="1" style="width:80px;">
+                </div>
+                <div class="input-group">
+                    <label>手续费(%)</label>
+                    <input type="number" id="cyq-commission" value="0.15" min="0" max="1" step="0.01" style="width:80px;">
+                </div>
+                <button class="btn btn-primary" onclick="runCyqBacktest()">开始回测</button>
+            </div>
+
+            <!-- 自动搜索结果 Top5 -->
+            <div id="cyq-auto-result" style="display:none;">
+                <h3 style="font-size:16px; margin:16px 0 8px;">最优参数组合 Top 5（按夏普比率排序）</h3>
+                <div class="fina-table-wrapper">
+                    <table id="cyq-auto-table" class="fina-table"></table>
+                </div>
+            </div>
+
+            <!-- 绩效统计 -->
+            <div id="cyq-bt-stats" class="backtest-stats" style="display:none;"></div>
+
+            <!-- 净值曲线 -->
+            <div id="cyq-bt-chart" class="stock-chart-container" style="height:350px; display:none;"></div>
+
+            <!-- 交易明细 -->
+            <div id="cyq-bt-trades-section" style="display:none;">
+                <h3 style="font-size:16px; margin:16px 0 8px;">交易明细</h3>
+                <div class="fina-table-wrapper">
+                    <table id="cyq-bt-trades-table" class="fina-table"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 单因子回测 -->
+    <div id="backtest-section" class="backtest-section" style="display:none;">
+        <h2 class="section-title">单因子回测</h2>
+        <div class="backtest-params">
+            <div class="input-group">
+                <label for="bt-factor">因子选择</label>
+                <select id="bt-factor" onchange="onFactorChange()">
+                    <option value="macd">MACD 金叉死叉</option>
+                    <option value="kdj">KDJ 金叉死叉</option>
+                    <option value="cci">CCI 超买超卖</option>
+                    <option value="ma">均线金叉死叉</option>
+                    <option value="ma_opt">均线最优搜索</option>
+                    <option value="pe">PE 百分位</option>
+                    <option value="pb">PB 百分位</option>
+                    <option value="ps">PS 百分位</option>
+                    <option value="ai_opt">AI 智能寻优</option>
+                </select>
+            </div>
+            <div class="input-group bt-param-ma" style="display:none;">
+                <label>短周期</label>
+                <input type="number" id="bt-ma-short" value="5" min="2" max="60" style="width:70px;">
+            </div>
+            <div class="input-group bt-param-ma" style="display:none;">
+                <label>长周期</label>
+                <input type="number" id="bt-ma-long" value="20" min="5" max="250" style="width:70px;">
+            </div>
+            <div class="input-group bt-param-pct" style="display:none;">
+                <label>买入阈值(%)</label>
+                <input type="number" id="bt-pct-buy" value="30" min="1" max="50" style="width:70px;">
+            </div>
+            <div class="input-group bt-param-pct" style="display:none;">
+                <label>卖出阈值(%)</label>
+                <input type="number" id="bt-pct-sell" value="70" min="50" max="99" style="width:70px;">
+            </div>
+            <div class="input-group bt-param-pct" style="display:none;">
+                <label>滚动窗口</label>
+                <input type="number" id="bt-pct-window" value="252" min="60" max="1000" style="width:80px;">
+            </div>
+            <div class="input-group">
+                <label>手续费(%)</label>
+                <input type="number" id="bt-commission" value="0.15" min="0" max="1" step="0.01" style="width:80px;">
+            </div>
+            <button class="btn btn-primary" onclick="runBacktest()">开始回测</button>
+        </div>
+
+        <!-- 信号说明 -->
+        <div id="bt-signal-desc" class="signal-desc"></div>
+
+        <!-- 绩效统计 -->
+        <div id="bt-stats" class="backtest-stats" style="display:none;"></div>
+
+        <!-- 净值曲线图 -->
+        <div id="bt-chart" class="stock-chart-container" style="height:350px; display:none;"></div>
+
+        <!-- 均线最优搜索结果 -->
+        <div id="bt-ma-opt-section" style="display:none;">
+            <h3 style="font-size:16px; margin:16px 0 8px;">均线最优组合 Top 10（按夏普比率排序）</h3>
+            <div class="fina-table-wrapper">
+                <table id="bt-ma-opt-table" class="fina-table"></table>
+            </div>
+        </div>
+
+        <!-- 交易明细 -->
+        <div id="bt-trades-section" style="display:none;">
+            <h3 style="font-size:16px; margin:16px 0 8px;">交易明细</h3>
+            <div class="fina-table-wrapper">
+                <table id="bt-trades-table" class="fina-table"></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 财务数据区 -->
+    <div id="fina-section" class="fina-section" style="display:none;">
+        <h2 class="section-title">财务基本面</h2>
+        <div class="fina-table-wrapper">
+            <table id="fina-table" class="fina-table"></table>
+        </div>
+    </div>
+
+    <!-- 财务指标历史趋势弹窗 -->
+    <div id="fina-chart-modal" class="fina-chart-modal" style="display:none;">
+        <div class="fina-chart-modal-content">
+            <div class="fina-chart-modal-header">
+                <h3 id="fina-chart-title"></h3>
+                <button class="btn btn-sm" onclick="closeFinaModal()">&times;</button>
+            </div>
+            <div id="fina-chart" style="width:100%;height:350px;"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/static/js/stock_analysis.js?v={{ asset_version }}"></script>
+{% endblock %}

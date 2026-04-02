@@ -1,0 +1,35 @@
+# macOS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Env files
+.env
+.env.local
+
+# Runtime artifacts
+AlphaFin/static/charts/*
+!AlphaFin/static/charts/.gitkeep
+AlphaFin/ai_team/data/*.db
+AlphaFin/ai_team/data/*.db-shm
+AlphaFin/ai_team/data/*.db-wal
+AlphaFin/ai_team/data/orchestrator_state.json
+AlphaFin/ai_team/data/research_reports/*
+!AlphaFin/ai_team/data/research_reports/.gitkeep
+
+# Local app data
+AlphaFin/data/*
+!AlphaFin/data/.gitkeep
+data/db/*
+!data/db/.gitkeep
+

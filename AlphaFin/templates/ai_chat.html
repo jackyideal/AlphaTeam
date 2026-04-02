@@ -1,0 +1,2115 @@
+{% extends "base.html" %}
+
+{% block title %}AI 智能分析{% endblock %}
+
+{% block content %}
+<div class="ai-chat-page ai-v3-page" id="ai-chat-page">
+    <section class="ai-v3-topbar">
+        <div class="ai-v3-brandline">
+            <span class="ai-v3-brand-mark">🤖</span>
+            <h1>AI 智能分析</h1>
+        </div>
+        <div class="ai-v3-featureline" aria-label="能力标签">
+            <span class="ai-feature-tag">💬 多轮对话</span>
+            <span class="ai-feature-tag">🌐 联网搜索</span>
+            <span class="ai-feature-tag">📊 图表分析</span>
+            <span class="ai-feature-tag">📈 实时行情</span>
+        </div>
+    </section>
+
+    <section class="ai-v3-workbench">
+        <aside class="ai-v3-thread-sidebar">
+            <div class="ai-v3-side-head">
+                <div class="ai-v3-side-head-copy">
+                    <div class="ai-v3-side-kicker">Chat Log</div>
+                    <h3>聊天记录</h3>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="createAiChatSession(true)">+ 新建</button>
+            </div>
+            <div id="ai-chat-session-list" class="ai-chat-session-list"></div>
+        </aside>
+
+        <div class="ai-v3-main-stack">
+            <div class="ai-source-status mode-offline" id="ai-source-status">
+                <span class="ai-source-dot" aria-hidden="true"></span>
+                <span class="ai-source-text" id="ai-source-text">实时数据状态检查中...</span>
+                <span class="ai-source-meta" id="ai-source-meta">检查时间: --</span>
+                <button class="btn btn-outline btn-sm ai-source-refresh" onclick="refreshAiSourceStatus(true)">刷新状态</button>
+            </div>
+
+            <div class="ai-chat-container">
+                <div class="chat-messages" id="ai-chat-messages">
+                    <div class="chat-msg assistant">
+                        <div class="role">🤖 Qwen AI</div>
+                        您好！我是 AlphaFin AI 分析助手，具备联网搜索能力。您可以向我咨询：
+                        <br>• A股个股分析与投资建议
+                        <br>• 市场热点与行业趋势
+                        <br>• 宏观经济数据解读
+                        <br>• 技术指标与策略分析
+                        <br>• 最新财经新闻与公告
+                        <br><br>请输入您的问题开始分析。
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="ai-chat-input-shell">
+                        <input type="text" id="ai-chat-input"
+                               placeholder="请输入您的问题，如：分析一下贵州茅台最近的走势和基本面..."
+                               onkeypress="if(event.key==='Enter')sendAiChat()">
+                        <button class="btn btn-primary ai-chat-send-btn" onclick="sendAiChat()">发送</button>
+                    </div>
+
+                    <div class="ai-chat-toolbar">
+                        <div class="ai-chat-control-item">
+                            <select id="ai-chat-model" class="ai-model-select" onchange="persistAiModelSetting()"></select>
+                        </div>
+                        <label class="ai-search-switch ai-chat-toggle-chip" title="开启后将使用网络搜索补充最新公开信息">
+                            <input type="checkbox" id="ai-chat-enable-search" checked onchange="persistAiSearchSetting()">
+                            联网搜索
+                        </label>
+                        <button class="ai-chat-ghost-btn" onclick="clearAiChat()" title="清空当前聊天">清空当前</button>
+                    </div>
+
+                    <div class="ai-context-row">
+                        <input type="file" id="ai-context-files" class="ai-chat-file-input" multiple
+                               accept=".txt,.md,.markdown,.csv,.tsv,.json,.log,.py,.sql,.yaml,.yml,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.bmp,.gif">
+                        <label class="ai-chat-ghost-btn ai-chat-file-label" for="ai-context-files">选择文件</label>
+                        <button class="ai-chat-ghost-btn" onclick="uploadAiContextFiles()">上传材料</button>
+                        <button class="ai-chat-ghost-btn" onclick="clearAiContexts()">清空材料</button>
+                        <span class="ai-context-status" id="ai-context-status">未上传上下文</span>
+                    </div>
+                    <div class="ai-context-list" id="ai-context-list"></div>
+                </div>
+            </div>
+        </div>
+        <aside class="ai-v3-rail">
+            <details class="ai-v3-prompt-drawer">
+                <summary class="ai-v3-prompt-trigger">系统提示词</summary>
+                <section class="prompt-editor-card">
+                    <div class="prompt-editor-head">
+                        <h3>系统提示词管理</h3>
+                        <p>可查看并修改 AI 智能分析助手的系统提示词。</p>
+                    </div>
+                    <div class="prompt-editor-row">
+                        <label for="ai-prompt-select">提示词对象</label>
+                        <select id="ai-prompt-select" onchange="onAiPromptSelectionChanged()"></select>
+                        <span id="ai-prompt-status" class="prompt-editor-status"></span>
+                    </div>
+                    <textarea id="ai-prompt-text" class="prompt-editor-textarea"
+                              placeholder="系统提示词加载中..."></textarea>
+                    <div class="prompt-editor-actions">
+                        <button class="btn btn-primary btn-sm" onclick="saveAiPromptConfig()">保存提示词</button>
+                        <button class="btn btn-outline btn-sm" onclick="resetAiPromptConfig()">恢复默认</button>
+                        <button class="btn btn-outline btn-sm" onclick="loadAiPromptConfigs()">刷新</button>
+                    </div>
+                </section>
+            </details>
+        </aside>
+    </section>
+
+    {% if show_watch_panel %}
+    <section class="ai-watch-panel" id="ai-watch-panel">
+        <div class="ai-watch-header">
+            <h2>🧾 盘后复盘</h2>
+            <p>基于盘后日线库进行复盘分析；若当日未收盘，则自动回退至上一交易日结果。</p>
+        </div>
+
+        <div class="ai-watch-controls">
+            <label class="ai-search-switch" title="开启后按固定间隔刷新复盘结果">
+                <input type="checkbox" id="ai-watch-auto" checked>
+                自动刷新复盘
+            </label>
+            <div class="ai-watch-control">
+                <span>刷新间隔</span>
+                <select id="ai-watch-interval">
+                    <option value="120">2分钟</option>
+                    <option value="300" selected>5分钟</option>
+                    <option value="600">10分钟</option>
+                    <option value="1800">30分钟</option>
+                </select>
+            </div>
+            <div class="ai-watch-control ai-watchlist-control">
+                <span>关注标的</span>
+                <input type="text" id="ai-watch-watchlist" placeholder="如：600425,600519,000001.SH">
+            </div>
+            <button class="btn btn-primary" onclick="refreshAiWatchSnapshot(true)">立即刷新</button>
+        </div>
+
+        <div class="ai-watch-runtime" id="ai-watch-runtime">等待首次加载...</div>
+        <div class="ai-watch-state" id="ai-watch-state">状态：待启动</div>
+
+        <div class="ai-watch-summary-grid">
+            <article class="ai-watch-summary-card" id="ai-watch-card-bias">
+                <h3>市场状态</h3>
+                <div class="value" id="ai-watch-bias">--</div>
+                <p id="ai-watch-clock">交易时段: --</p>
+            </article>
+            <article class="ai-watch-summary-card" id="ai-watch-card-heat">
+                <h3>市场热度</h3>
+                <div class="value" id="ai-watch-heat">--</div>
+                <p id="ai-watch-hot-sector">热点行业: --</p>
+            </article>
+            <article class="ai-watch-summary-card" id="ai-watch-card-breadth">
+                <h3>市场广度</h3>
+                <div class="value" id="ai-watch-breadth">--</div>
+                <p id="ai-watch-breadth-date">统计日期: --</p>
+            </article>
+            <article class="ai-watch-summary-card" id="ai-watch-card-alert">
+                <h3>风险告警</h3>
+                <div class="value" id="ai-watch-alert-count">0</div>
+                <p id="ai-watch-alert-level">高优先级: 0</p>
+            </article>
+        </div>
+
+        <div class="ai-watch-chart-grid">
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>市场温度趋势</h3>
+                    <span>近60交易日</span>
+                </div>
+                <div id="ai-watch-chart-index" class="ai-watch-chart"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>活跃标的排行</h3>
+                    <span>按成交额</span>
+                </div>
+                <div id="ai-watch-chart-sector" class="ai-watch-chart"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>关注标的趋势</h3>
+                    <span>近60交易日</span>
+                </div>
+                <div id="ai-watch-chart-stock" class="ai-watch-chart"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>市场广度趋势</h3>
+                    <span>近60交易日</span>
+                </div>
+                <div id="ai-watch-chart-breadth" class="ai-watch-chart"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>市场情绪结构</h3>
+                    <span>上涨/下跌/平盘</span>
+                </div>
+                <div id="ai-watch-chart-structure" class="ai-watch-chart"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>热榜涨跌分布</h3>
+                    <span>Top 15</span>
+                </div>
+                <div id="ai-watch-chart-hotrank" class="ai-watch-chart"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>主力资金净流向</h3>
+                    <span>近60交易日</span>
+                </div>
+                <div id="ai-watch-chart-moneyflow" class="ai-watch-chart"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>融资融券余额趋势</h3>
+                    <span>近60交易日</span>
+                </div>
+                <div id="ai-watch-chart-margin" class="ai-watch-chart"></div>
+            </article>
+        </div>
+
+        <div class="ai-watch-data-grid">
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>指数快照</h3>
+                    <span>盘后快照</span>
+                </div>
+                <div class="ai-watch-table-wrap">
+                    <table class="ai-watch-table">
+                        <thead>
+                        <tr>
+                            <th>指数</th>
+                            <th>最新点位</th>
+                            <th>当日涨跌</th>
+                            <th>时间</th>
+                            <th>数据源</th>
+                        </tr>
+                        </thead>
+                        <tbody id="ai-watch-index-body"></tbody>
+                    </table>
+                </div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>活跃标的</h3>
+                    <span>盘后快照</span>
+                </div>
+                <div class="ai-watch-table-wrap">
+                    <table class="ai-watch-table">
+                        <thead>
+                        <tr>
+                            <th>标的</th>
+                            <th>涨跌幅</th>
+                            <th>成交额</th>
+                            <th>时间</th>
+                            <th>数据源</th>
+                        </tr>
+                        </thead>
+                        <tbody id="ai-watch-sector-body"></tbody>
+                    </table>
+                </div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>重点个股</h3>
+                    <span>自选+补全</span>
+                </div>
+                <div class="ai-watch-table-wrap">
+                    <table class="ai-watch-table">
+                        <thead>
+                        <tr>
+                            <th>代码</th>
+                            <th>名称</th>
+                            <th>现价</th>
+                            <th>涨跌幅</th>
+                            <th>时间</th>
+                            <th>数据源</th>
+                        </tr>
+                        </thead>
+                        <tbody id="ai-watch-stock-body"></tbody>
+                    </table>
+                </div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>同花顺热榜</h3>
+                    <span>盘后活跃度</span>
+                </div>
+                <div class="ai-watch-list" id="ai-watch-hotrank-list"></div>
+            </article>
+        </div>
+
+        <div class="ai-watch-data-grid ai-watch-data-grid-3">
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>风险告警</h3>
+                    <span>按优先级排序</span>
+                </div>
+                <div class="ai-watch-list" id="ai-watch-alert-list"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>资金与杠杆快照</h3>
+                    <span>盘后口径</span>
+                </div>
+                <div class="ai-watch-list" id="ai-watch-capital-list"></div>
+            </article>
+            <article class="ai-watch-card">
+                <div class="ai-watch-card-head">
+                    <h3>证据链</h3>
+                    <span>可验证来源</span>
+                </div>
+                <div class="ai-watch-list" id="ai-watch-evidence-list"></div>
+            </article>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<script>
+    var aiChatHistory = [];
+    var aiSourceStatusTimer = null;
+    var aiTraceLoaded = {};
+    var aiPromptConfigs = [];
+    var aiModelOptions = [];
+    var aiContextIds = [];
+    var aiContextFiles = [];
+    var aiChatSessions = [];
+    var aiActiveChatId = '';
+    var AI_CHAT_SESSION_STORAGE_KEY = 'alphafin_ai_chat_sessions_v1';
+    var AI_CHAT_ACTIVE_STORAGE_KEY = 'alphafin_ai_chat_active_v1';
+    var AI_CHAT_MODEL_STORAGE_KEY = 'alphafin_ai_chat_model_v1';
+    var aiWatchState = {
+        timer: null,
+        loading: false,
+        lastPayload: null,
+        chartsInitialized: false,
+        echartsLoading: false,
+        echartsLoadTried: false,
+        charts: {}
+    };
+
+    function _aiNowTs() {
+        return Date.now();
+    }
+
+    function _aiNewId(prefix) {
+        return String(prefix || 'id') + '_' + _aiNowTs().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    }
+
+    function _aiDefaultAssistantIntro() {
+        return [
+            '您好！我是 AlphaFin AI 分析助手，具备联网搜索能力。您可以向我咨询：',
+            '• A股个股分析与投资建议',
+            '• 市场热点与行业趋势',
+            '• 宏观经济数据解读',
+            '• 技术指标与策略分析',
+            '• 最新财经新闻与公告',
+            '',
+            '请输入您的问题开始分析。'
+        ].join('\n');
+    }
+
+    function _buildAiChatTitleByQuestion(question) {
+        var q = String(question || '').trim().replace(/\s+/g, ' ');
+        if (!q) return '新聊天';
+        return q.length > 18 ? (q.slice(0, 18) + '...') : q;
+    }
+
+    function _newAiChatSession() {
+        var now = _aiNowTs();
+        return {
+            id: _aiNewId('chat'),
+            title: '新聊天',
+            created_at: now,
+            updated_at: now,
+            messages: [
+                {
+                    id: _aiNewId('msg'),
+                    role: 'assistant',
+                    text: _aiDefaultAssistantIntro(),
+                    is_intro: true,
+                    created_at: now
+                }
+            ]
+        };
+    }
+
+    function _saveAiChatSessions() {
+        try {
+            localStorage.setItem(AI_CHAT_SESSION_STORAGE_KEY, JSON.stringify(aiChatSessions || []));
+            localStorage.setItem(AI_CHAT_ACTIVE_STORAGE_KEY, String(aiActiveChatId || ''));
+        } catch (e) {}
+    }
+
+    function _loadAiChatSessions() {
+        aiChatSessions = [];
+        aiActiveChatId = '';
+        try {
+            var raw = localStorage.getItem(AI_CHAT_SESSION_STORAGE_KEY);
+            var active = localStorage.getItem(AI_CHAT_ACTIVE_STORAGE_KEY);
+            var parsed = raw ? JSON.parse(raw) : [];
+            if (Array.isArray(parsed)) {
+                aiChatSessions = parsed.filter(function(s) {
+                    return s && typeof s === 'object' && s.id && Array.isArray(s.messages);
+                }).slice(0, 30);
+            }
+            aiActiveChatId = String(active || '');
+        } catch (e) {
+            aiChatSessions = [];
+            aiActiveChatId = '';
+        }
+        if (!aiChatSessions.length) {
+            var first = _newAiChatSession();
+            aiChatSessions = [first];
+            aiActiveChatId = first.id;
+            _saveAiChatSessions();
+            return;
+        }
+        var hasActive = aiChatSessions.some(function(s) { return String(s.id) === String(aiActiveChatId); });
+        if (!hasActive) {
+            aiActiveChatId = String(aiChatSessions[0].id);
+            _saveAiChatSessions();
+        }
+    }
+
+    function _getAiActiveSession() {
+        for (var i = 0; i < aiChatSessions.length; i++) {
+            if (String(aiChatSessions[i].id) === String(aiActiveChatId)) return aiChatSessions[i];
+        }
+        return null;
+    }
+
+    function _extractAiHistory(session) {
+        var s = session || _getAiActiveSession();
+        var out = [];
+        var rows = (s && Array.isArray(s.messages)) ? s.messages : [];
+        for (var i = 0; i < rows.length; i++) {
+            var m = rows[i] || {};
+            if (m.role === 'user' && m.text) {
+                out.push({role: 'user', content: String(m.text)});
+            } else if (m.role === 'assistant' && m.text && !m.pending && !m.error && !m.is_intro) {
+                out.push({role: 'assistant', content: String(m.text)});
+            }
+        }
+        return out;
+    }
+
+    function _renderAiSessionMessage(msg) {
+        var m = msg || {};
+        if (m.role === 'user') {
+            return '<div class="chat-msg user"><div class="role">👤 你</div>' + escapeHtml(String(m.text || '')) + '</div>';
+        }
+        var html = '';
+        if (m.pending) {
+            html = '<span class="spinner"></span> ' + escapeHtml(String(m.status_text || '正在分析中...'));
+        } else if (m.error) {
+            html = '<div class="role">🤖 Qwen AI</div>请求失败: ' + escapeHtml(String(m.error || 'unknown'));
+        } else {
+            var modelText = m.model ? (' · ' + escapeHtml(String(m.model))) : '';
+            var searchText = (m.enable_search === false) ? ' · 搜索OFF' : ' · 搜索ON';
+            var modeText = (m.mode === 'qwen_direct') ? ' · 直连联网' : ' · 证据链模式';
+            var ctxText = m.context_file_count ? (' · 材料' + String(m.context_file_count) + '份') : '';
+            html = '<div class="role">🤖 Qwen AI' + modelText + searchText + modeText + ctxText + '</div>' +
+                formatReply(String(m.text || ''));
+            if (m.trace_id) {
+                html += renderAiTracePanel(m.trace_id, m.snapshot_time || '');
+            }
+        }
+        return '<div class="chat-msg assistant">' + html + '</div>';
+    }
+
+    function _renderAiChatMessages() {
+        var container = document.getElementById('ai-chat-messages');
+        if (!container) return;
+        var session = _getAiActiveSession();
+        var rows = (session && Array.isArray(session.messages)) ? session.messages : [];
+        if (!rows.length) {
+            container.innerHTML = '<div class="chat-msg assistant"><div class="role">🤖 Qwen AI</div>' +
+                escapeHtml(_aiDefaultAssistantIntro()).replace(/\n/g, '<br>') + '</div>';
+            aiChatHistory = [];
+            return;
+        }
+        container.innerHTML = rows.map(function(m) { return _renderAiSessionMessage(m); }).join('');
+        container.scrollTop = container.scrollHeight;
+        aiChatHistory = _extractAiHistory(session);
+    }
+
+    function _renderAiChatSessionList() {
+        var box = document.getElementById('ai-chat-session-list');
+        if (!box) return;
+        box.innerHTML = aiChatSessions.map(function(s) {
+            var active = String(s.id) === String(aiActiveChatId);
+            var cls = active ? 'ai-chat-session-item active' : 'ai-chat-session-item';
+            var title = escapeHtml(String(s.title || '新聊天'));
+            return '<button class="' + cls + '" onclick="switchAiChatSession(\'' + escapeHtml(String(s.id)) + '\')">' +
+                title + '</button>';
+        }).join('');
+    }
+
+    function switchAiChatSession(sessionId) {
+        var sid = String(sessionId || '');
+        var found = aiChatSessions.some(function(s) { return String(s.id) === sid; });
+        if (!found) return;
+        aiActiveChatId = sid;
+        _saveAiChatSessions();
+        _renderAiChatSessionList();
+        _renderAiChatMessages();
+    }
+
+    function createAiChatSession(makeActive) {
+        var s = _newAiChatSession();
+        aiChatSessions.unshift(s);
+        if (aiChatSessions.length > 30) aiChatSessions = aiChatSessions.slice(0, 30);
+        if (makeActive !== false) {
+            aiActiveChatId = s.id;
+        }
+        _saveAiChatSessions();
+        _renderAiChatSessionList();
+        _renderAiChatMessages();
+    }
+
+    function _touchAiSession(session) {
+        if (!session) return;
+        session.updated_at = _aiNowTs();
+        _saveAiChatSessions();
+        _renderAiChatSessionList();
+    }
+
+    function initAiSearchSetting() {
+        var key = 'alphafin_ai_chat_enable_search';
+        var box = document.getElementById('ai-chat-enable-search');
+        if (!box) return;
+        try {
+            var saved = localStorage.getItem(key);
+            if (saved === '0') box.checked = false;
+            else if (saved === '1') box.checked = true;
+        } catch (e) {}
+    }
+
+    function persistAiSearchSetting() {
+        var key = 'alphafin_ai_chat_enable_search';
+        var box = document.getElementById('ai-chat-enable-search');
+        if (!box) return;
+        try {
+            localStorage.setItem(key, box.checked ? '1' : '0');
+        } catch (e) {}
+    }
+
+    function isAiSearchEnabled() {
+        var box = document.getElementById('ai-chat-enable-search');
+        return !!(box && box.checked);
+    }
+
+    function renderAiModelSelect(options, currentModel) {
+        var sel = document.getElementById('ai-chat-model');
+        if (!sel) return;
+        var rows = Array.isArray(options) ? options : [];
+        aiModelOptions = rows.slice();
+        if (!rows.length) {
+            rows = ['qwen3-max', 'Moonshot-Kimi-K2-Instruct', 'deepseek-r1', 'MiniMax-M2.1'];
+        }
+        var old = String(sel.value || '');
+        sel.innerHTML = rows.map(function(model) {
+            var m = String(model || '').trim();
+            return '<option value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</option>';
+        }).join('');
+
+        var target = '';
+        try {
+            target = String(localStorage.getItem(AI_CHAT_MODEL_STORAGE_KEY) || '').trim();
+        } catch (e) {}
+        if (target && rows.indexOf(target) < 0) target = '';
+        if (!target) target = String(currentModel || '').trim();
+        if (!target && old && rows.indexOf(old) >= 0) target = old;
+        if (!target) target = rows[0];
+        sel.value = target;
+    }
+
+    function loadAiModelOptions(silent) {
+        var sel = document.getElementById('ai-chat-model');
+        if (!sel) return;
+        if (!silent) {
+            sel.innerHTML = '<option value="">模型加载中...</option>';
+        }
+        fetch('/api/ai_chat/models', {cache: 'no-store'})
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                renderAiModelSelect(data.allowed_models || [], data.current_model || '');
+            })
+            .catch(function() {
+                renderAiModelSelect([], 'qwen3-max');
+            });
+    }
+
+    function getAiSelectedModel() {
+        var sel = document.getElementById('ai-chat-model');
+        return sel ? String(sel.value || '').trim() : '';
+    }
+
+    function persistAiModelSetting() {
+        var modelName = getAiSelectedModel();
+        if (!modelName) return;
+        try {
+            localStorage.setItem(AI_CHAT_MODEL_STORAGE_KEY, modelName);
+        } catch (e) {}
+        fetch('/api/ai_chat/model', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({model: modelName})
+        }).catch(function() {});
+    }
+
+    function setAiContextStatus(text, level) {
+        var el = document.getElementById('ai-context-status');
+        if (!el) return;
+        el.textContent = String(text || '');
+        el.classList.remove('ok', 'error', 'loading');
+        if (level === 'ok') el.classList.add('ok');
+        else if (level === 'error') el.classList.add('error');
+        else if (level === 'loading') el.classList.add('loading');
+    }
+
+    function renderAiContextList() {
+        var box = document.getElementById('ai-context-list');
+        if (!box) return;
+        if (!aiContextFiles.length) {
+            box.innerHTML = '';
+            setAiContextStatus('未上传上下文', '');
+            return;
+        }
+        box.innerHTML = aiContextFiles.map(function(item) {
+            var name = escapeHtml(String(item.name || '未命名文件'));
+            var kind = escapeHtml(String(item.type || 'document'));
+            var pv = escapeHtml(String(item.preview || ''));
+            return '<div class="ai-context-chip">' +
+                '<div class="title">[' + kind + '] ' + name + '</div>' +
+                '<div class="preview">' + pv + '</div>' +
+                '</div>';
+        }).join('');
+        setAiContextStatus('已加载 ' + aiContextFiles.length + ' 个材料文件', 'ok');
+    }
+
+    function clearAiContexts() {
+        aiContextIds = [];
+        aiContextFiles = [];
+        var inp = document.getElementById('ai-context-files');
+        if (inp) inp.value = '';
+        renderAiContextList();
+    }
+
+    function uploadAiContextFiles() {
+        var inp = document.getElementById('ai-context-files');
+        if (!inp || !inp.files || !inp.files.length) {
+            setAiContextStatus('请先选择文件', 'error');
+            return;
+        }
+        var fd = new FormData();
+        fd.append('module', 'ai_chat');
+        for (var i = 0; i < inp.files.length; i++) {
+            fd.append('files', inp.files[i]);
+        }
+
+        setAiContextStatus('上传与解析中...', 'loading');
+        fetch('/api/context/upload', {
+            method: 'POST',
+            body: fd
+        })
+        .then(function(res) {
+            return res.text().then(function(text) {
+                var data = null;
+                try {
+                    data = text ? JSON.parse(text) : {};
+                } catch (e) {
+                    if (res.status === 404) {
+                        throw new Error('上传接口未加载（HTTP 404），请重启 AlphaFin 服务');
+                    }
+                    throw new Error('服务返回非 JSON（HTTP ' + res.status + '）');
+                }
+                if (!res.ok || (data && data.ok === false)) {
+                    var msg = (data && (data.error || data.message)) || ('HTTP ' + res.status);
+                    throw new Error(msg);
+                }
+                return data || {};
+            });
+        })
+        .then(function(data) {
+            if (data.context_id) aiContextIds.push(String(data.context_id));
+            var rows = Array.isArray(data.files) ? data.files : [];
+            for (var i = 0; i < rows.length; i++) aiContextFiles.push(rows[i]);
+            renderAiContextList();
+            if (Array.isArray(data.warnings) && data.warnings.length) {
+                setAiContextStatus('已上传，部分文件有提示：' + data.warnings[0], 'error');
+            }
+            inp.value = '';
+        })
+        .catch(function(err) {
+            setAiContextStatus('上传失败: ' + String((err && err.message) || err || ''), 'error');
+        });
+    }
+
+    function setAiPromptStatus(text, level) {
+        var el = document.getElementById('ai-prompt-status');
+        if (!el) return;
+        el.textContent = text || '';
+        el.classList.remove('ok', 'error', 'loading');
+        if (level === 'ok') el.classList.add('ok');
+        else if (level === 'error') el.classList.add('error');
+        else if (level === 'loading') el.classList.add('loading');
+    }
+
+    function loadAiPromptConfigs(silent) {
+        if (!silent) setAiPromptStatus('正在加载...', 'loading');
+        fetch('/api/ai_chat/prompts', {cache: 'no-store'})
+            .then(function(res) {
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        throw new Error('HTTP 404（接口未加载，请重启 AlphaFin 服务）');
+                    }
+                    throw new Error('HTTP ' + res.status);
+                }
+                return res.json();
+            })
+            .then(function(data) {
+                aiPromptConfigs = Array.isArray(data.prompts) ? data.prompts : [];
+                renderAiPromptSelect();
+                onAiPromptSelectionChanged();
+                setAiPromptStatus('已加载', 'ok');
+            })
+            .catch(function(err) {
+                setAiPromptStatus('加载失败: ' + String((err && err.message) || err || ''), 'error');
+            });
+    }
+
+    function renderAiPromptSelect() {
+        var sel = document.getElementById('ai-prompt-select');
+        if (!sel) return;
+        if (!aiPromptConfigs.length) {
+            sel.innerHTML = '<option value="">暂无可配置项</option>';
+            return;
+        }
+        var prev = sel.value;
+        sel.innerHTML = aiPromptConfigs.map(function(item) {
+            var desc = item.description ? (' - ' + item.description) : '';
+            var flag = item.is_overridden ? '（已覆盖）' : '';
+            return '<option value="' + escapeHtml(String(item.key || '')) + '">' +
+                escapeHtml(String(item.name || item.key || '')) + flag + desc + '</option>';
+        }).join('');
+        if (prev) sel.value = prev;
+        if (!sel.value && aiPromptConfigs[0]) sel.value = aiPromptConfigs[0].key;
+    }
+
+    function getCurrentAiPromptItem() {
+        var sel = document.getElementById('ai-prompt-select');
+        var key = sel ? sel.value : '';
+        for (var i = 0; i < aiPromptConfigs.length; i++) {
+            if (String(aiPromptConfigs[i].key) === String(key)) return aiPromptConfigs[i];
+        }
+        return null;
+    }
+
+    function onAiPromptSelectionChanged() {
+        var textArea = document.getElementById('ai-prompt-text');
+        var item = getCurrentAiPromptItem();
+        if (!textArea) return;
+        if (!item) {
+            textArea.value = '';
+            return;
+        }
+        textArea.value = String(item.prompt || '');
+    }
+
+    function saveAiPromptConfig() {
+        var item = getCurrentAiPromptItem();
+        var textArea = document.getElementById('ai-prompt-text');
+        if (!item || !textArea) return;
+
+        var promptText = String(textArea.value || '').trim();
+        if (!promptText) {
+            setAiPromptStatus('提示词不能为空', 'error');
+            return;
+        }
+
+        setAiPromptStatus('保存中...', 'loading');
+        fetch('/api/ai_chat/prompts/' + encodeURIComponent(item.key), {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({prompt: promptText})
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.error) throw new Error(data.error);
+            aiPromptConfigs = Array.isArray(data.prompts) ? data.prompts : aiPromptConfigs;
+            renderAiPromptSelect();
+            onAiPromptSelectionChanged();
+            setAiPromptStatus('保存成功，后续对话立即生效', 'ok');
+        })
+        .catch(function(err) {
+            setAiPromptStatus('保存失败: ' + String((err && err.message) || err || ''), 'error');
+        });
+    }
+
+    function resetAiPromptConfig() {
+        var item = getCurrentAiPromptItem();
+        if (!item) return;
+        setAiPromptStatus('恢复默认中...', 'loading');
+        fetch('/api/ai_chat/prompts/' + encodeURIComponent(item.key) + '/reset', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.error) throw new Error(data.error);
+            aiPromptConfigs = Array.isArray(data.prompts) ? data.prompts : aiPromptConfigs;
+            renderAiPromptSelect();
+            onAiPromptSelectionChanged();
+            setAiPromptStatus('已恢复默认提示词', 'ok');
+        })
+        .catch(function(err) {
+            setAiPromptStatus('恢复失败: ' + String((err && err.message) || err || ''), 'error');
+        });
+    }
+
+    function sendAiChat() {
+        var input = document.getElementById('ai-chat-input');
+        var message = input.value.trim();
+        if (!message) return;
+        input.value = '';
+        var searchEnabled = isAiSearchEnabled();
+        var session = _getAiActiveSession();
+        if (!session) {
+            createAiChatSession(true);
+            session = _getAiActiveSession();
+        }
+        var historyForApi = _extractAiHistory(session);
+        var hasContext = aiContextIds.length > 0;
+        var loadingText = searchEnabled ? '正在分析中，已启用联网搜索...' : '正在分析中...';
+        if (hasContext) {
+            loadingText += '（含上传材料）';
+        }
+        if (!session.messages || !Array.isArray(session.messages)) session.messages = [];
+        session.messages.push({
+            id: _aiNewId('msg'),
+            role: 'user',
+            text: message,
+            created_at: _aiNowTs()
+        });
+        var pendingId = _aiNewId('msg');
+        session.messages.push({
+            id: pendingId,
+            role: 'assistant',
+            pending: true,
+            status_text: loadingText,
+            created_at: _aiNowTs()
+        });
+        if (session.title === '新聊天' || (session.messages.length <= 3)) {
+            session.title = _buildAiChatTitleByQuestion(message);
+        }
+        _touchAiSession(session);
+        _renderAiChatMessages();
+
+        fetch('/api/ai_chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                message: message,
+                history: historyForApi,
+                model: getAiSelectedModel(),
+                enable_search: searchEnabled,
+                context_ids: aiContextIds
+            })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            var replyText = (data && data.reply) ? data.reply : '无回复';
+            var s = _getAiActiveSession();
+            if (!s || !Array.isArray(s.messages)) return;
+            for (var i = 0; i < s.messages.length; i++) {
+                var row = s.messages[i];
+                if (String(row.id) === String(pendingId)) {
+                    s.messages[i] = {
+                        id: row.id,
+                        role: 'assistant',
+                        text: replyText,
+                        model: data && data.model ? String(data.model) : '',
+                        enable_search: !(data && data.enable_search === false),
+                        mode: data && data.mode ? String(data.mode) : '',
+                        context_file_count: data && data.context_file_count ? data.context_file_count : 0,
+                        trace_id: data && data.trace_id ? String(data.trace_id) : '',
+                        snapshot_time: data && data.snapshot_time ? String(data.snapshot_time) : '',
+                        created_at: row.created_at || _aiNowTs()
+                    };
+                    break;
+                }
+            }
+            _touchAiSession(s);
+            _renderAiChatMessages();
+        })
+        .catch(function(err) {
+            var s = _getAiActiveSession();
+            if (!s || !Array.isArray(s.messages)) return;
+            for (var i = 0; i < s.messages.length; i++) {
+                var row = s.messages[i];
+                if (String(row.id) === String(pendingId)) {
+                    s.messages[i] = {
+                        id: row.id,
+                        role: 'assistant',
+                        error: String(err || ''),
+                        created_at: row.created_at || _aiNowTs()
+                    };
+                    break;
+                }
+            }
+            _touchAiSession(s);
+            _renderAiChatMessages();
+        });
+    }
+
+    function appendAiMessage(role, content) {
+        var container = document.getElementById('ai-chat-messages');
+        var id = 'ai-msg-' + Date.now();
+        var div = document.createElement('div');
+        div.id = id;
+        div.className = 'chat-msg ' + role;
+        if (role === 'user') {
+            div.innerHTML = '<div class="role">👤 你</div>' + escapeHtml(content);
+        } else {
+            div.innerHTML = content;
+        }
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return id;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatReply(text) {
+        return escapeHtml(String(text || '')).replace(/\n/g, '<br>');
+    }
+
+    function renderAiTracePanel(traceId, snapshotTime) {
+        var safeId = String(traceId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        var boxId = 'ai-trace-box-' + safeId;
+        var timeText = snapshotTime ? ('快照时间: ' + escapeHtml(snapshotTime)) : '';
+        return '' +
+            '<div class="ai-trace-panel">' +
+            '<button class="btn btn-outline btn-sm ai-trace-btn" ' +
+            'onclick="toggleAiTraceDetails(\'' + safeId + '\', \'' + boxId + '\', this)">' +
+            '查看验证与推理详情</button>' +
+            '<span class="ai-trace-meta">' + timeText + '</span>' +
+            '<div id="' + boxId + '" class="ai-trace-box" style="display:none;">' +
+            '<div class="ai-trace-loading">正在加载详情...</div>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function toggleAiTraceDetails(traceId, boxId, btn) {
+        var box = document.getElementById(boxId);
+        if (!box) return;
+
+        var hidden = (box.style.display === 'none' || !box.style.display);
+        if (!hidden) {
+            box.style.display = 'none';
+            if (btn) btn.textContent = '查看验证与推理详情';
+            return;
+        }
+
+        box.style.display = 'block';
+        if (btn) btn.textContent = '收起验证与推理详情';
+
+        if (aiTraceLoaded[traceId]) return;
+
+        fetch('/api/ai_chat/trace/' + traceId, {cache: 'no-store'})
+            .then(function(res) { return res.json(); })
+            .then(function(trace) {
+                box.innerHTML = formatAiTrace(trace);
+                aiTraceLoaded[traceId] = true;
+            })
+            .catch(function(err) {
+                box.innerHTML = '<div class="ai-trace-error">加载失败: ' + escapeHtml(String(err || 'unknown')) + '</div>';
+            });
+    }
+
+    function formatAiTrace(trace) {
+        if (!trace || trace.error) {
+            return '<div class="ai-trace-error">' + escapeHtml((trace && trace.error) || '暂无回溯详情') + '</div>';
+        }
+        var parts = [];
+        parts.push('<div class="ai-trace-head">回溯ID: ' + escapeHtml(trace.trace_id || '-') + '</div>');
+        parts.push('<div class="ai-trace-head">创建时间: ' + escapeHtml(trace.created_at || '-') + '</div>');
+        parts.push('<div class="ai-trace-head">联网搜索: ' + (trace.enable_search === false ? 'OFF' : 'ON') + '</div>');
+        if (trace.web_search_forced === true) {
+            parts.push('<div class="ai-trace-head">联网策略: 勾选即强制搜索</div>');
+        }
+
+        if (trace.snapshot && trace.snapshot.context_text) {
+            parts.push('<div class="ai-trace-section">数据快照</div>');
+            parts.push('<pre>' + escapeHtml(String(trace.snapshot.context_text || '')) + '</pre>');
+        }
+        var fullAnswer = trace.raw_answer || trace.answer || '';
+        if (fullAnswer) {
+            parts.push('<div class="ai-trace-section">完整回答</div>');
+            parts.push('<pre>' + escapeHtml(String(fullAnswer)) + '</pre>');
+        }
+        if (trace.snapshot && Array.isArray(trace.snapshot.evidence)) {
+            parts.push('<div class="ai-trace-section">证据条数: ' + trace.snapshot.evidence.length + '</div>');
+        }
+        return parts.join('');
+    }
+
+    function clearAiChat() {
+        var session = _getAiActiveSession();
+        if (!session) return;
+        var now = _aiNowTs();
+        session.messages = [{
+            id: _aiNewId('msg'),
+            role: 'assistant',
+            text: '对话已清空，请输入新的问题。',
+            is_intro: true,
+            created_at: now
+        }];
+        session.updated_at = now;
+        _saveAiChatSessions();
+        _renderAiChatMessages();
+    }
+
+    function refreshAiSourceStatus(manual) {
+        var textEl = document.getElementById('ai-source-text');
+        if (manual && textEl) {
+            textEl.textContent = '正在刷新实时数据状态...';
+        }
+        fetch('/api/ai_chat/status', {cache: 'no-store'})
+            .then(function(res) { return res.json(); })
+            .then(function(status) { setAiSourceStatus(status); })
+            .catch(function(err) {
+                setAiSourceStatus({
+                    mode: 'offline',
+                    summary: '状态接口不可用',
+                    checked_at: '',
+                    errors: [String(err || '')]
+                });
+            });
+    }
+
+    function setAiSourceStatus(status) {
+        status = status || {};
+        var box = document.getElementById('ai-source-status');
+        var textEl = document.getElementById('ai-source-text');
+        var metaEl = document.getElementById('ai-source-meta');
+        if (!box || !textEl || !metaEl) return;
+
+        var mode = status.mode ? status.mode : 'offline';
+        if (['realtime', 'degraded', 'offline'].indexOf(mode) < 0) mode = 'offline';
+
+        box.classList.remove('mode-realtime', 'mode-degraded', 'mode-offline');
+        box.classList.add('mode-' + mode);
+
+        textEl.textContent = status.summary || '数据源状态未知';
+
+        var parts = [];
+        if (status.intraday_index_source) parts.push('指数源: ' + status.intraday_index_source);
+        if (status.intraday_index_time) parts.push('指数时间: ' + status.intraday_index_time);
+        if (status.stock_quote_source) parts.push('个股源: ' + status.stock_quote_source);
+        if (status.stock_quote_time) parts.push('个股时间: ' + status.stock_quote_time);
+        parts.push(status.intraday_news_ok ? '快讯: 可用' : '快讯: 缺失');
+        if (status.local_db_latest_trade_date) {
+            parts.push('本地日线: ' + status.local_db_latest_trade_date);
+        } else {
+            parts.push('本地日线: 无');
+        }
+        if (status.checked_at) parts.push('检查时间: ' + status.checked_at);
+        metaEl.textContent = parts.join(' | ');
+    }
+
+    function initAiWatchPanel() {
+        restoreAiWatchSettings();
+
+        var autoBox = document.getElementById('ai-watch-auto');
+        var intervalSel = document.getElementById('ai-watch-interval');
+        var watchlistInput = document.getElementById('ai-watch-watchlist');
+
+        if (autoBox) autoBox.addEventListener('change', function() { onAiWatchControlChanged(false); });
+        if (intervalSel) intervalSel.addEventListener('change', function() { onAiWatchControlChanged(false); });
+        if (watchlistInput) {
+            watchlistInput.addEventListener('change', function() { onAiWatchControlChanged(true); });
+            watchlistInput.addEventListener('keypress', function(evt) {
+                if (evt && evt.key === 'Enter') {
+                    evt.preventDefault();
+                    refreshAiWatchSnapshot(true);
+                }
+            });
+        }
+
+        onAiWatchControlChanged(false);
+        refreshAiWatchSnapshot(false);
+    }
+
+    function restoreAiWatchSettings() {
+        try {
+            var auto = localStorage.getItem('alphafin_ai_watch_auto');
+            var interval = localStorage.getItem('alphafin_ai_watch_interval');
+            var watchlist = localStorage.getItem('alphafin_ai_watch_watchlist');
+
+            var autoBox = document.getElementById('ai-watch-auto');
+            var intervalSel = document.getElementById('ai-watch-interval');
+            var watchlistInput = document.getElementById('ai-watch-watchlist');
+
+            if (autoBox && auto !== null) autoBox.checked = auto === '1';
+            if (intervalSel && interval) intervalSel.value = interval;
+            if (watchlistInput && watchlist) watchlistInput.value = watchlist;
+        } catch (e) {}
+    }
+
+    function persistAiWatchSettings() {
+        var autoBox = document.getElementById('ai-watch-auto');
+        var intervalSel = document.getElementById('ai-watch-interval');
+        var watchlistInput = document.getElementById('ai-watch-watchlist');
+        try {
+            localStorage.setItem('alphafin_ai_watch_auto', autoBox && autoBox.checked ? '1' : '0');
+            localStorage.setItem('alphafin_ai_watch_interval', intervalSel ? String(intervalSel.value || '120') : '120');
+            localStorage.setItem('alphafin_ai_watch_watchlist', watchlistInput ? String(watchlistInput.value || '') : '');
+        } catch (e) {}
+    }
+
+    function onAiWatchControlChanged(triggerRefresh) {
+        persistAiWatchSettings();
+        scheduleAiWatchTimer();
+        if (triggerRefresh) {
+            refreshAiWatchSnapshot(false);
+        }
+    }
+
+    function scheduleAiWatchTimer() {
+        if (aiWatchState.timer) {
+            window.clearInterval(aiWatchState.timer);
+            aiWatchState.timer = null;
+        }
+        var autoBox = document.getElementById('ai-watch-auto');
+        var intervalSel = document.getElementById('ai-watch-interval');
+        var autoOn = !!(autoBox && autoBox.checked);
+        if (!autoOn) {
+            setAiWatchState('自动刷新已关闭', 'idle');
+            return;
+        }
+        var intervalSec = parseInt(intervalSel && intervalSel.value ? intervalSel.value : '120', 10);
+        if (!intervalSec || intervalSec < 10) intervalSec = 120;
+        aiWatchState.timer = window.setInterval(function() {
+            refreshAiWatchSnapshot(false);
+        }, intervalSec * 1000);
+        setAiWatchState('自动刷新已开启（' + intervalSec + '秒）', 'ok');
+    }
+
+    function refreshAiWatchSnapshot(force) {
+        if (aiWatchState.loading) return;
+        aiWatchState.loading = true;
+        setAiWatchState('正在生成盘后复盘...', 'loading');
+
+        var watchlistInput = document.getElementById('ai-watch-watchlist');
+        var watchlist = watchlistInput ? String(watchlistInput.value || '').trim() : '';
+        var forceValue = force ? '1' : '0';
+
+        var url = '/api/ai_watch/snapshot?watchlist=' + encodeURIComponent(watchlist) +
+            '&include_news=0&force=' + forceValue;
+
+        fetch(url, {cache: 'no-store'})
+            .then(function(res) {
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+                return res.json();
+            })
+            .then(function(payload) {
+                renderAiWatchPayload(payload || {});
+            })
+            .catch(function(err) {
+                setAiWatchState('复盘数据获取失败: ' + String(err || 'unknown'), 'error');
+            })
+            .finally(function() {
+                aiWatchState.loading = false;
+            });
+    }
+
+    function setAiWatchState(text, level) {
+        var el = document.getElementById('ai-watch-state');
+        if (!el) return;
+        el.textContent = '状态：' + String(text || '--');
+        el.classList.remove('level-ok', 'level-loading', 'level-error', 'level-idle', 'level-warning');
+        if (level === 'loading') el.classList.add('level-loading');
+        else if (level === 'error') el.classList.add('level-error');
+        else if (level === 'idle') el.classList.add('level-idle');
+        else if (level === 'warning') el.classList.add('level-warning');
+        else el.classList.add('level-ok');
+    }
+
+    function renderAiWatchPayload(payload) {
+        aiWatchState.lastPayload = payload || {};
+        var summary = payload.summary || {};
+        var status = payload.status || {};
+        var clock = payload.clock || {};
+        var review = payload.review || {};
+        var breadth = payload.breadth || {};
+        var errors = payload.errors || [];
+
+        document.getElementById('ai-watch-bias').textContent = summary.market_bias || '--';
+        document.getElementById('ai-watch-clock').textContent = '复盘日期: ' + (summary.trade_date || review.trade_date || clock.trade_date || '--');
+        document.getElementById('ai-watch-heat').textContent = summary.market_heat_score !== undefined ? (formatNumber(summary.market_heat_score, 1) + ' / 100') : '--';
+        document.getElementById('ai-watch-hot-sector').textContent = '活跃标的: ' + ((summary.hot_sector_name || '--') + ' ' + (summary.hot_sector_pct !== null && summary.hot_sector_pct !== undefined ? formatPct(summary.hot_sector_pct, 2) : ''));
+        document.getElementById('ai-watch-breadth').textContent = summary.breadth_up_ratio !== undefined ? (formatPct(summary.breadth_up_ratio, 1)) : '--';
+        document.getElementById('ai-watch-breadth-date').textContent = '统计日期: ' + (breadth.trade_date || '--');
+        document.getElementById('ai-watch-alert-count').textContent = String(summary.alerts_count || 0);
+        document.getElementById('ai-watch-alert-level').textContent = '高优先级: ' + String(summary.high_alerts || 0);
+
+        applySummaryCardTone(summary);
+
+        var runtimeParts = [];
+        runtimeParts.push('生成时间: ' + (payload.generated_at || '--'));
+        runtimeParts.push('复盘交易日: ' + (review.trade_date || summary.trade_date || '--'));
+        runtimeParts.push(review.used_previous ? '口径: 未收盘回退至上一交易日' : '口径: 盘后当日复盘');
+        runtimeParts.push('状态: ' + (status.summary || '--'));
+        runtimeParts.push('模式: ' + (status.mode || '--'));
+        runtimeParts.push('关注标的: ' + ((payload.watchlist || []).join(', ') || '自动补全'));
+        runtimeParts.push(payload.cached ? '缓存: 命中' : '缓存: 新鲜');
+        document.getElementById('ai-watch-runtime').textContent = runtimeParts.join(' | ');
+
+        renderAiWatchCharts(payload);
+        renderAiWatchTables(payload);
+        renderAiWatchLists(payload);
+
+        if (errors.length) {
+            setAiWatchState('部分数据源异常（' + errors.length + '）', 'warning');
+        } else {
+            setAiWatchState('盘后复盘已更新', 'ok');
+        }
+    }
+
+    function applySummaryCardTone(summary) {
+        var biasCard = document.getElementById('ai-watch-card-bias');
+        var heatCard = document.getElementById('ai-watch-card-heat');
+        var breadthCard = document.getElementById('ai-watch-card-breadth');
+        var alertCard = document.getElementById('ai-watch-card-alert');
+        if (!biasCard || !heatCard || !breadthCard || !alertCard) return;
+
+        biasCard.classList.remove('tone-up', 'tone-down', 'tone-mid');
+        heatCard.classList.remove('tone-up', 'tone-down', 'tone-mid');
+        breadthCard.classList.remove('tone-up', 'tone-down', 'tone-mid');
+        alertCard.classList.remove('tone-up', 'tone-down', 'tone-mid');
+
+        var bias = String(summary.market_bias || '');
+        var heat = toNumber(summary.market_heat_score);
+        var breadth = toNumber(summary.breadth_up_ratio);
+        var highAlerts = parseInt(summary.high_alerts || 0, 10);
+
+        if (bias === '偏强') biasCard.classList.add('tone-up');
+        else if (bias === '偏弱') biasCard.classList.add('tone-down');
+        else biasCard.classList.add('tone-mid');
+
+        if (heat >= 65) heatCard.classList.add('tone-up');
+        else if (heat <= 35) heatCard.classList.add('tone-down');
+        else heatCard.classList.add('tone-mid');
+
+        if (breadth >= 58) breadthCard.classList.add('tone-up');
+        else if (breadth <= 42) breadthCard.classList.add('tone-down');
+        else breadthCard.classList.add('tone-mid');
+
+        if (highAlerts >= 2) alertCard.classList.add('tone-down');
+        else if (highAlerts === 0) alertCard.classList.add('tone-up');
+        else alertCard.classList.add('tone-mid');
+    }
+
+    function loadEchartsWithFallback(done) {
+        if (window.echarts) {
+            done(true);
+            return;
+        }
+        var urls = [
+            'https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js',
+            'https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js',
+            'https://unpkg.com/echarts@5/dist/echarts.min.js'
+        ];
+        var idx = 0;
+        function tryNext() {
+            if (window.echarts) {
+                done(true);
+                return;
+            }
+            if (idx >= urls.length) {
+                done(false);
+                return;
+            }
+            var src = urls[idx++];
+            var script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = function() { done(!!window.echarts); };
+            script.onerror = function() { tryNext(); };
+            document.head.appendChild(script);
+        }
+        tryNext();
+    }
+
+    function ensureAiWatchCharts() {
+        if (!window.echarts) {
+            if (!aiWatchState.echartsLoading && !aiWatchState.echartsLoadTried) {
+                aiWatchState.echartsLoading = true;
+                aiWatchState.echartsLoadTried = true;
+                loadEchartsWithFallback(function(ok) {
+                    aiWatchState.echartsLoading = false;
+                    if (ok && aiWatchState.lastPayload) {
+                        renderAiWatchCharts(aiWatchState.lastPayload);
+                        return;
+                    }
+                    if (!ok) {
+                        setAiWatchState('图表库加载失败，已保留表格/列表数据', 'warning');
+                    }
+                });
+            }
+            return false;
+        }
+        if (aiWatchState.chartsInitialized) return true;
+
+        var indexEl = document.getElementById('ai-watch-chart-index');
+        var sectorEl = document.getElementById('ai-watch-chart-sector');
+        var stockEl = document.getElementById('ai-watch-chart-stock');
+        var breadthEl = document.getElementById('ai-watch-chart-breadth');
+        var structureEl = document.getElementById('ai-watch-chart-structure');
+        var hotrankEl = document.getElementById('ai-watch-chart-hotrank');
+        var moneyflowEl = document.getElementById('ai-watch-chart-moneyflow');
+        var marginEl = document.getElementById('ai-watch-chart-margin');
+        if (!indexEl || !sectorEl || !stockEl || !breadthEl || !structureEl || !hotrankEl || !moneyflowEl || !marginEl) return false;
+
+        aiWatchState.charts.index = echarts.init(indexEl);
+        aiWatchState.charts.sector = echarts.init(sectorEl);
+        aiWatchState.charts.stock = echarts.init(stockEl);
+        aiWatchState.charts.breadth = echarts.init(breadthEl);
+        aiWatchState.charts.structure = echarts.init(structureEl);
+        aiWatchState.charts.hotrank = echarts.init(hotrankEl);
+        aiWatchState.charts.moneyflow = echarts.init(moneyflowEl);
+        aiWatchState.charts.margin = echarts.init(marginEl);
+        aiWatchState.chartsInitialized = true;
+
+        window.addEventListener('resize', function() {
+            if (!aiWatchState.chartsInitialized) return;
+            Object.keys(aiWatchState.charts).forEach(function(k) {
+                var chart = aiWatchState.charts[k];
+                if (chart && chart.resize) chart.resize();
+            });
+        });
+        return true;
+    }
+
+    function renderAiWatchCharts(payload) {
+        if (!ensureAiWatchCharts()) return;
+        renderIndexChart(payload || {});
+        renderSectorChart(payload || {});
+        renderStockChart(payload || {});
+        renderBreadthChart(payload || {});
+        renderBreadthStructureChart(payload || {});
+        renderHotrankChart(payload || {});
+        renderMoneyflowChart(payload || {});
+        renderMarginChart(payload || {});
+    }
+
+    function renderNoDataChart(chart, title) {
+        if (!chart) return;
+        chart.setOption({
+            title: {
+                text: title || '',
+                left: 'center',
+                top: 'center',
+                textStyle: {color: '#94a3b8', fontSize: 13, fontWeight: 500}
+            },
+            xAxis: {show: false},
+            yAxis: {show: false},
+            series: []
+        }, true);
+    }
+
+    function normalizeLineData(points) {
+        return (points || []).map(function(p) {
+            return [toNumber(p.ts), toNumber(p.value)];
+        }).filter(function(p) {
+            return p[0] !== null && p[1] !== null;
+        });
+    }
+
+    function isLineDataInsufficient(data) {
+        if (!data || data.length < 3) return true;
+        var minV = data[0][1];
+        var maxV = data[0][1];
+        for (var i = 1; i < data.length; i++) {
+            var v = data[i][1];
+            if (v < minV) minV = v;
+            if (v > maxV) maxV = v;
+        }
+        return Math.abs(maxV - minV) < 0.0001;
+    }
+
+    function pickSeriesData(primaryMap, fallbackMap, code) {
+        var primary = normalizeLineData(primaryMap && primaryMap[code] ? primaryMap[code] : []);
+        var fallback = normalizeLineData(fallbackMap && fallbackMap[code] ? fallbackMap[code] : []);
+        if (!isLineDataInsufficient(primary)) {
+            return {data: primary, source: 'intraday'};
+        }
+        if (fallback.length >= 2) {
+            return {data: fallback, source: 'fallback'};
+        }
+        return {data: primary, source: 'intraday'};
+    }
+
+    function renderIndexChart(payload) {
+        var chart = aiWatchState.charts.index;
+        if (!chart) return;
+        var indexes = payload.indexes || [];
+        var history = payload.history && payload.history.index_pct ? payload.history.index_pct : {};
+        var fallback = payload.fallback_trend && payload.fallback_trend.index_pct ? payload.fallback_trend.index_pct : {};
+        var order = [];
+        indexes.forEach(function(item) {
+            var code = String(item.ts_code || '');
+            if (code && order.indexOf(code) < 0) order.push(code);
+        });
+        Object.keys(history).forEach(function(code) {
+            if (order.indexOf(code) < 0) order.push(code);
+        });
+        Object.keys(fallback).forEach(function(code) {
+            if (order.indexOf(code) < 0) order.push(code);
+        });
+        if (!order.length) {
+            renderNoDataChart(chart, '暂无指数数据');
+            return;
+        }
+
+        var series = [];
+        var hasFallbackSeries = false;
+        order.forEach(function(code) {
+            var picked = pickSeriesData(history, fallback, code);
+            var lineData = picked.data || [];
+            if (lineData.length < 2) return;
+            if (picked.source === 'fallback') hasFallbackSeries = true;
+            series.push({
+                name: mapIndexName(code),
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                data: lineData
+            });
+        });
+
+        if (series.length) {
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    valueFormatter: function(v) {
+                        return v === null || v === undefined || Number.isNaN(v) ? '--' : formatSigned(v, 3) + '%';
+                    }
+                },
+                legend: {top: 4, data: series.map(function(s) { return s.name; })},
+                title: hasFallbackSeries ? {
+                    text: '实时不足，已用近60交易日趋势兜底',
+                    right: 8,
+                    top: 6,
+                    textStyle: {fontSize: 11, fontWeight: 400, color: '#94a3b8'}
+                } : {text: ''},
+                grid: {left: 56, right: 26, top: 42, bottom: 26},
+                xAxis: {type: 'time'},
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        formatter: function(v) { return formatSigned(v, 2) + '%'; }
+                    }
+                },
+                series: series
+            }, true);
+            return;
+        }
+
+        var barNames = [];
+        var barData = [];
+        indexes.forEach(function(row) {
+            barNames.push(mapIndexName(row.ts_code));
+            barData.push(toNumber(row.intraday_pct));
+        });
+        if (!barData.length || !barData.some(function(v) { return v !== null; })) {
+            renderNoDataChart(chart, '暂无指数数据');
+            return;
+        }
+        chart.setOption({
+            tooltip: {trigger: 'axis'},
+            grid: {left: 56, right: 26, top: 22, bottom: 26},
+            xAxis: {type: 'category', data: barNames},
+            yAxis: {
+                type: 'value',
+                axisLabel: {formatter: function(v) { return formatSigned(v, 2) + '%'; }}
+            },
+            series: [{
+                type: 'bar',
+                data: barData,
+                itemStyle: {
+                    color: function(params) {
+                        var v = toNumber(params.value);
+                        if (v > 0) return '#ef4444';
+                        if (v < 0) return '#10b981';
+                        return '#94a3b8';
+                    }
+                }
+            }]
+        }, true);
+    }
+
+    function renderSectorChart(payload) {
+        var chart = aiWatchState.charts.sector;
+        if (!chart) return;
+        var rows = (payload.sectors || []).slice(0, 10);
+        if (!rows.length) {
+            renderNoDataChart(chart, '暂无行业热度');
+            return;
+        }
+        var hasValidSector = rows.some(function(r) { return toNumber(r.pct_change) !== null; });
+        if (!hasValidSector) {
+            renderNoDataChart(chart, '暂无行业热度');
+            return;
+        }
+        rows = rows.reverse();
+        chart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {type: 'shadow'},
+                valueFormatter: function(v) { return formatSigned(v, 2) + '%'; }
+            },
+            grid: {left: 90, right: 24, top: 16, bottom: 22},
+            xAxis: {
+                type: 'value',
+                axisLabel: {formatter: function(v) { return formatSigned(v, 1) + '%'; }}
+            },
+            yAxis: {
+                type: 'category',
+                data: rows.map(function(r) { return String(r.name || r.ts_code || '--'); })
+            },
+            series: [{
+                type: 'bar',
+                data: rows.map(function(r) { return toNumber(r.pct_change); }),
+                itemStyle: {
+                    borderRadius: [0, 5, 5, 0],
+                    color: function(params) {
+                        var v = toNumber(params.value);
+                        if (v > 0) return '#f97316';
+                        if (v < 0) return '#22c55e';
+                        return '#94a3b8';
+                    }
+                }
+            }]
+        }, true);
+    }
+
+    function renderStockChart(payload) {
+        var chart = aiWatchState.charts.stock;
+        if (!chart) return;
+        var stocks = payload.stocks || [];
+        var history = payload.history && payload.history.stock_pct ? payload.history.stock_pct : {};
+        var fallback = payload.fallback_trend && payload.fallback_trend.stock_pct ? payload.fallback_trend.stock_pct : {};
+        var order = [];
+        stocks.forEach(function(item) {
+            var code = String(item.ts_code || '');
+            if (code && order.indexOf(code) < 0) order.push(code);
+        });
+        Object.keys(history).forEach(function(code) {
+            if (order.indexOf(code) < 0) order.push(code);
+        });
+        Object.keys(fallback).forEach(function(code) {
+            if (order.indexOf(code) < 0) order.push(code);
+        });
+        if (!order.length) {
+            renderNoDataChart(chart, '暂无个股数据');
+            return;
+        }
+
+        var nameMap = {};
+        stocks.forEach(function(item) {
+            nameMap[String(item.ts_code || '')] = item.name || '';
+        });
+
+        var series = [];
+        var hasFallbackSeries = false;
+        order.forEach(function(code) {
+            var picked = pickSeriesData(history, fallback, code);
+            var lineData = picked.data || [];
+            if (lineData.length < 2) return;
+            if (picked.source === 'fallback') hasFallbackSeries = true;
+            var nm = nameMap[code] ? (nameMap[code] + '(' + code + ')') : code;
+            series.push({
+                name: nm,
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                data: lineData
+            });
+        });
+
+        if (series.length) {
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    valueFormatter: function(v) { return formatSigned(v, 3) + '%'; }
+                },
+                legend: {top: 4, data: series.map(function(s) { return s.name; })},
+                title: hasFallbackSeries ? {
+                    text: '实时不足，已用近60交易日趋势兜底',
+                    right: 8,
+                    top: 6,
+                    textStyle: {fontSize: 11, fontWeight: 400, color: '#94a3b8'}
+                } : {text: ''},
+                grid: {left: 56, right: 26, top: 44, bottom: 26},
+                xAxis: {type: 'time'},
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {formatter: function(v) { return formatSigned(v, 2) + '%'; }}
+                },
+                series: series
+            }, true);
+            return;
+        }
+
+        var stockBarData = stocks.map(function(r) { return toNumber(r.pct_change); });
+        if (!stockBarData.length || !stockBarData.some(function(v) { return v !== null; })) {
+            renderNoDataChart(chart, '暂无个股数据');
+            return;
+        }
+
+        chart.setOption({
+            tooltip: {trigger: 'axis'},
+            grid: {left: 56, right: 26, top: 20, bottom: 26},
+            xAxis: {
+                type: 'category',
+                data: stocks.map(function(r) { return (r.name || r.ts_code || '--'); })
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: {formatter: function(v) { return formatSigned(v, 1) + '%'; }}
+            },
+            series: [{
+                type: 'bar',
+                data: stockBarData,
+                itemStyle: {
+                    color: function(params) {
+                        var v = toNumber(params.value);
+                        if (v > 0) return '#ef4444';
+                        if (v < 0) return '#16a34a';
+                        return '#94a3b8';
+                    }
+                }
+            }]
+        }, true);
+    }
+
+    function renderBreadthChart(payload) {
+        var chart = aiWatchState.charts.breadth;
+        if (!chart) return;
+        var points = payload.history && payload.history.breadth_up_ratio ? payload.history.breadth_up_ratio : [];
+        var fallbackPoints = payload.fallback_trend && payload.fallback_trend.breadth_up_ratio ? payload.fallback_trend.breadth_up_ratio : [];
+        var liveData = normalizeLineData(points);
+        var fallbackData = normalizeLineData(fallbackPoints);
+        var useFallback = isLineDataInsufficient(liveData) && fallbackData.length >= 2;
+        var lineData = useFallback ? fallbackData : liveData;
+
+        if (lineData.length) {
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    valueFormatter: function(v) { return formatNumber(v, 2) + '%'; }
+                },
+                title: useFallback ? {
+                    text: '近60交易日市场广度',
+                    right: 8,
+                    top: 6,
+                    textStyle: {fontSize: 11, fontWeight: 400, color: '#94a3b8'}
+                } : {text: ''},
+                grid: {left: 50, right: 22, top: 24, bottom: 26},
+                xAxis: {type: 'time'},
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 100,
+                    axisLabel: {formatter: '{value}%'}
+                },
+                series: [{
+                    name: '上涨占比',
+                    type: 'line',
+                    smooth: true,
+                    showSymbol: false,
+                    areaStyle: {opacity: 0.12},
+                    data: lineData,
+                    markLine: {
+                        symbol: 'none',
+                        lineStyle: {type: 'dashed', color: '#f59e0b'},
+                        data: [{yAxis: 50, name: '中轴50%'}]
+                    }
+                }]
+            }, true);
+            return;
+        }
+
+        var ratio = toNumber(payload.breadth && payload.breadth.up_ratio);
+        if (ratio === null) {
+            renderNoDataChart(chart, '暂无市场广度');
+            return;
+        }
+        chart.setOption({
+            series: [{
+                type: 'gauge',
+                min: 0,
+                max: 100,
+                progress: {show: true, width: 12},
+                axisLine: {lineStyle: {width: 12}},
+                detail: {formatter: '{value}%', fontSize: 20, offsetCenter: [0, '66%']},
+                data: [{value: Number(ratio.toFixed(2)), name: '上涨占比'}]
+            }]
+        }, true);
+    }
+
+    function renderBreadthStructureChart(payload) {
+        var chart = aiWatchState.charts.structure;
+        if (!chart) return;
+        var b = payload.breadth || {};
+        var up = toNumber(b.up_count);
+        var down = toNumber(b.down_count);
+        var flat = toNumber(b.flat_count);
+        var limitUp = toNumber(b.limit_up_count);
+        var limitDown = toNumber(b.limit_down_count);
+
+        if (up === null && down === null && flat === null) {
+            renderNoDataChart(chart, '暂无结构数据');
+            return;
+        }
+        chart.setOption({
+            tooltip: {trigger: 'item'},
+            legend: {bottom: 4},
+            graphic: [{
+                type: 'text',
+                left: 'center',
+                top: '42%',
+                style: {
+                    text: '涨停 ' + formatNumber(limitUp, 0) + ' | 跌停 ' + formatNumber(limitDown, 0),
+                    fill: '#94a3b8',
+                    fontSize: 11
+                }
+            }],
+            series: [{
+                type: 'pie',
+                radius: ['42%', '68%'],
+                center: ['50%', '46%'],
+                avoidLabelOverlap: true,
+                label: {formatter: '{b}: {d}%'},
+                data: [
+                    {name: '上涨', value: up || 0, itemStyle: {color: '#ef4444'}},
+                    {name: '下跌', value: down || 0, itemStyle: {color: '#22c55e'}},
+                    {name: '平盘', value: flat || 0, itemStyle: {color: '#94a3b8'}}
+                ]
+            }]
+        }, true);
+    }
+
+    function renderHotrankChart(payload) {
+        var chart = aiWatchState.charts.hotrank;
+        if (!chart) return;
+        var rows = (payload.hotrank || []).slice(0, 15);
+        var valid = rows.filter(function(r) { return toNumber(r.pct_change) !== null; });
+        if (!valid.length) {
+            renderNoDataChart(chart, '暂无热榜分布');
+            return;
+        }
+        valid.sort(function(a, b) {
+            return (toNumber(a.pct_change) || 0) - (toNumber(b.pct_change) || 0);
+        });
+        chart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {type: 'shadow'},
+                valueFormatter: function(v) { return formatSigned(v, 2) + '%'; }
+            },
+            grid: {left: 90, right: 24, top: 16, bottom: 22},
+            xAxis: {
+                type: 'value',
+                axisLabel: {formatter: function(v) { return formatSigned(v, 1) + '%'; }}
+            },
+            yAxis: {
+                type: 'category',
+                data: valid.map(function(r) {
+                    var nm = String(r.name || r.ts_code || '--');
+                    return nm.length > 8 ? nm.slice(0, 8) + '…' : nm;
+                })
+            },
+            series: [{
+                type: 'bar',
+                data: valid.map(function(r) { return toNumber(r.pct_change); }),
+                itemStyle: {
+                    borderRadius: [0, 4, 4, 0],
+                    color: function(params) {
+                        var v = toNumber(params.value);
+                        if (v > 0) return '#ef4444';
+                        if (v < 0) return '#22c55e';
+                        return '#94a3b8';
+                    }
+                }
+            }]
+        }, true);
+    }
+
+    function renderMoneyflowChart(payload) {
+        var chart = aiWatchState.charts.moneyflow;
+        if (!chart) return;
+        var points = payload.trends && payload.trends.moneyflow_net ? payload.trends.moneyflow_net : [];
+        var lineData = normalizeLineData(points);
+        if (!lineData.length) {
+            renderNoDataChart(chart, '暂无资金流数据');
+            return;
+        }
+        chart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                valueFormatter: function(v) { return formatAmount(v); }
+            },
+            grid: {left: 56, right: 24, top: 20, bottom: 26},
+            xAxis: {type: 'time'},
+            yAxis: {
+                type: 'value',
+                axisLabel: {formatter: function(v) { return formatAmount(v); }}
+            },
+            series: [{
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                areaStyle: {opacity: 0.12},
+                data: lineData,
+                itemStyle: {
+                    color: '#0ea5e9'
+                }
+            }]
+        }, true);
+    }
+
+    function renderMarginChart(payload) {
+        var chart = aiWatchState.charts.margin;
+        if (!chart) return;
+        var points = payload.trends && payload.trends.margin_balance ? payload.trends.margin_balance : [];
+        var lineData = normalizeLineData(points);
+        if (!lineData.length) {
+            renderNoDataChart(chart, '暂无融资融券数据');
+            return;
+        }
+        chart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                valueFormatter: function(v) { return formatAmount(v); }
+            },
+            grid: {left: 56, right: 24, top: 20, bottom: 26},
+            xAxis: {type: 'time'},
+            yAxis: {
+                type: 'value',
+                axisLabel: {formatter: function(v) { return formatAmount(v); }}
+            },
+            series: [{
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                areaStyle: {opacity: 0.1},
+                data: lineData,
+                itemStyle: {
+                    color: '#f59e0b'
+                }
+            }]
+        }, true);
+    }
+
+    function renderAiWatchTables(payload) {
+        renderIndexTable(payload.indexes || []);
+        renderSectorTable(payload.sectors || []);
+        renderStockTable(payload.stocks || []);
+    }
+
+    function renderIndexTable(rows) {
+        var body = document.getElementById('ai-watch-index-body');
+        if (!body) return;
+        if (!rows.length) {
+            body.innerHTML = '<tr><td class="watch-empty" colspan="5">暂无指数数据</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(function(r) {
+            return '' +
+                '<tr>' +
+                '<td>' + escapeHtml(mapIndexName(r.ts_code)) + '</td>' +
+                '<td>' + escapeHtml(formatNumber(r.close, 2)) + '</td>' +
+                '<td>' + formatValueSpan(r.intraday_pct, 2, '%') + '</td>' +
+                '<td>' + escapeHtml(formatClockTime(r.time)) + '</td>' +
+                '<td>' + escapeHtml(String(r.source || '--')) + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function renderSectorTable(rows) {
+        var body = document.getElementById('ai-watch-sector-body');
+        if (!body) return;
+        if (!rows.length) {
+            body.innerHTML = '<tr><td class="watch-empty" colspan="5">暂无行业数据</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.slice(0, 12).map(function(r) {
+            return '' +
+                '<tr>' +
+                '<td>' + escapeHtml(String(r.name || r.ts_code || '--')) + '</td>' +
+                '<td>' + formatValueSpan(r.pct_change, 2, '%') + '</td>' +
+                '<td>' + escapeHtml(formatAmount(r.amount)) + '</td>' +
+                '<td>' + escapeHtml(formatClockTime(r.trade_time)) + '</td>' +
+                '<td>' + escapeHtml(String(r.source || '--')) + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function renderStockTable(rows) {
+        var body = document.getElementById('ai-watch-stock-body');
+        if (!body) return;
+        if (!rows.length) {
+            body.innerHTML = '<tr><td class="watch-empty" colspan="6">暂无个股数据</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(function(r) {
+            return '' +
+                '<tr>' +
+                '<td>' + escapeHtml(String(r.ts_code || '--')) + '</td>' +
+                '<td>' + escapeHtml(String(r.name || '--')) + '</td>' +
+                '<td>' + escapeHtml(formatNumber(r.price, 3)) + '</td>' +
+                '<td>' + formatValueSpan(r.pct_change, 2, '%') + '</td>' +
+                '<td>' + escapeHtml(formatClockTime(r.quote_time)) + '</td>' +
+                '<td>' + escapeHtml(String(r.source || '--')) + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function renderAiWatchLists(payload) {
+        renderHotrankList(payload.hotrank || []);
+        renderAlertList(payload.alerts || []);
+        renderCapitalList(payload || {});
+        renderEvidenceList(payload.evidence || []);
+    }
+
+    function renderHotrankList(rows) {
+        var box = document.getElementById('ai-watch-hotrank-list');
+        if (!box) return;
+        if (!rows.length) {
+            box.innerHTML = '<div class="watch-empty">暂无热榜数据</div>';
+            return;
+        }
+        box.innerHTML = rows.slice(0, 12).map(function(r) {
+            var name = String(r.name || r.ts_code || '--');
+            var rank = r.rank !== undefined && r.rank !== null && String(r.rank) !== '' ? ('#' + String(r.rank)) : '--';
+            var pct = r.pct_change !== undefined && r.pct_change !== null && String(r.pct_change) !== '' ? formatValueSpan(r.pct_change, 2, '%') : '<span class="val-flat">--</span>';
+            return '' +
+                '<div class="ai-watch-list-item">' +
+                '<div class="main">' + escapeHtml(name) + ' <span class="sub">' + escapeHtml(rank) + '</span></div>' +
+                '<div class="meta">' + pct + ' <span>' + escapeHtml(formatClockTime(r.rank_time)) + '</span></div>' +
+                '</div>';
+        }).join('');
+    }
+
+    function renderAlertList(rows) {
+        var box = document.getElementById('ai-watch-alert-list');
+        if (!box) return;
+        if (!rows.length) {
+            box.innerHTML = '<div class="watch-empty">当前无告警</div>';
+            return;
+        }
+        box.innerHTML = rows.map(function(r) {
+            var sev = String(r.severity || 'low');
+            var sevText = sev === 'high' ? '高' : (sev === 'medium' ? '中' : '低');
+            return '' +
+                '<div class="ai-watch-list-item">' +
+                '<div class="main"><span class="watch-sev sev-' + escapeHtml(sev) + '">' + sevText + '</span> ' +
+                escapeHtml(String(r.title || '--')) + '</div>' +
+                '<div class="meta"><span>' + escapeHtml(String(r.detail || '--')) + '</span><span>' +
+                escapeHtml(formatClockTime(r.time || '')) + '</span></div>' +
+                '</div>';
+        }).join('');
+    }
+
+    function renderCapitalList(payload) {
+        var box = document.getElementById('ai-watch-capital-list');
+        if (!box) return;
+        var capital = payload.capital_flow || {};
+        var margin = payload.margin || {};
+        var northbound = payload.northbound || {};
+
+        var cards = [];
+        cards.push({
+            title: '主力净流向',
+            detail: '净额: ' + formatAmount(capital.net_mf_amount),
+            meta: '日期: ' + (capital.trade_date || '--') + ' | 来源: ' + (capital.source || '--')
+        });
+        cards.push({
+            title: '融资融券余额',
+            detail: '总余额: ' + formatAmount(margin.rzrqye) + ' | 变化: ' + formatAmount(margin.delta_rzrqye),
+            meta: '日期: ' + (margin.trade_date || '--') + ' | 来源: ' + (margin.source || '--')
+        });
+        cards.push({
+            title: '北向持仓概览',
+            detail: '标的数: ' + formatNumber(northbound.stock_count, 0) + ' | 平均占比: ' + formatPct(northbound.avg_ratio, 2),
+            meta: '日期: ' + (northbound.trade_date || '--') + ' | 来源: ' + (northbound.source || '--')
+        });
+
+        box.innerHTML = cards.map(function(c) {
+            return '' +
+                '<div class="ai-watch-list-item">' +
+                '<div class="main">' + escapeHtml(String(c.title || '--')) + '</div>' +
+                '<div class="meta"><span>' + escapeHtml(String(c.detail || '--')) + '</span></div>' +
+                '<div class="meta"><span>' + escapeHtml(String(c.meta || '--')) + '</span></div>' +
+                '</div>';
+        }).join('');
+    }
+
+    function renderEvidenceList(rows) {
+        var box = document.getElementById('ai-watch-evidence-list');
+        if (!box) return;
+        if (!rows.length) {
+            box.innerHTML = '<div class="watch-empty">暂无证据链数据</div>';
+            return;
+        }
+        box.innerHTML = rows.map(function(r) {
+            return '' +
+                '<div class="ai-watch-list-item">' +
+                '<div class="main">' + escapeHtml(String(r.module || '--')) + ' · ' +
+                '<span class="sub">' + escapeHtml(String(r.status || '--')) + '</span></div>' +
+                '<div class="meta"><span>' + escapeHtml(String(r.detail || '--')) + '</span>' +
+                '<span>' + escapeHtml(formatClockTime(r.timestamp || '')) + '</span></div>' +
+                '</div>';
+        }).join('');
+    }
+
+    function mapIndexName(code) {
+        var c = String(code || '').toUpperCase();
+        if (c === '000001.SH') return '上证指数';
+        if (c === '000300.SH') return '沪深300';
+        if (c === '399001.SZ') return '深证成指';
+        if (c === '399006.SZ') return '创业板指';
+        return c || '--';
+    }
+
+    function formatClockTime(value) {
+        var s = String(value || '').trim();
+        if (!s) return '--';
+        if (s.indexOf(' ') >= 0) return s.split(' ').pop().slice(0, 8);
+        return s.slice(0, 8);
+    }
+
+    function formatAmount(v) {
+        var n = toNumber(v);
+        if (n === null) return '--';
+        if (Math.abs(n) >= 1e8) return formatNumber(n / 1e8, 2) + '亿';
+        if (Math.abs(n) >= 1e4) return formatNumber(n / 1e4, 2) + '万';
+        return formatNumber(n, 2);
+    }
+
+    function formatNumber(v, digits) {
+        var n = toNumber(v);
+        if (n === null) return '--';
+        var d = digits === undefined ? 2 : digits;
+        return Number(n).toFixed(d);
+    }
+
+    function formatSigned(v, digits) {
+        var n = toNumber(v);
+        if (n === null) return '--';
+        var d = digits === undefined ? 2 : digits;
+        var s = Number(n).toFixed(d);
+        if (n > 0) return '+' + s;
+        return s;
+    }
+
+    function formatPct(v, digits) {
+        return formatSigned(v, digits === undefined ? 2 : digits) + '%';
+    }
+
+    function formatValueSpan(v, digits, suffix) {
+        var n = toNumber(v);
+        if (n === null) return '<span class="val-flat">--</span>';
+        var text = formatSigned(n, digits === undefined ? 2 : digits) + (suffix || '');
+        if (n > 0) return '<span class="val-up">' + escapeHtml(text) + '</span>';
+        if (n < 0) return '<span class="val-down">' + escapeHtml(text) + '</span>';
+        return '<span class="val-flat">' + escapeHtml(text) + '</span>';
+    }
+
+    function toNumber(v) {
+        if (v === null || v === undefined || v === '') return null;
+        var n = Number(v);
+        if (Number.isNaN(n)) return null;
+        return n;
+    }
+
+    _loadAiChatSessions();
+    _renderAiChatSessionList();
+    _renderAiChatMessages();
+    renderAiContextList();
+    initAiSearchSetting();
+    loadAiModelOptions(true);
+    loadAiPromptConfigs(true);
+    refreshAiSourceStatus(false);
+    aiSourceStatusTimer = window.setInterval(function() {
+        refreshAiSourceStatus(false);
+    }, 30000);
+    if (document.getElementById('ai-watch-panel')) {
+        initAiWatchPanel();
+    }
+</script>
+{% endblock %}

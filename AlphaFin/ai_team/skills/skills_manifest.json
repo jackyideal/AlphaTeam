@@ -1,0 +1,195 @@
+{
+  "skills": [
+    {
+      "id": "skill_sentiment_ice_scanner_1772971271",
+      "name": "sentiment_ice_scanner",
+      "description": "情绪冰点扫描器：基于价格位置(较20日高点跌>10%)、筹码结构(胜率<40%)、量能特征(成交量/20日均量<0.35)三维度识别情绪冰点信号",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_sentiment_ice_scanner_1772971271.py",
+      "created_at": 1772971271.360053
+    },
+    {
+      "id": "skill_macro_filter_layer_1772971271",
+      "name": "macro_filter_layer",
+      "description": "宏观因子过滤层：融合美债10Y收益率、美元兑人民币汇率、VIX指数三因子，对原始交易信号进行风险调整",
+      "category": "risk_rule",
+      "creator": "quant",
+      "approved": false,
+      "file": "skill_macro_filter_layer_1772971271.py",
+      "created_at": 1772971271.417304
+    },
+    {
+      "id": "skill_risk_assessment_qingsong_1772971507",
+      "name": "risk_assessment_qingsong",
+      "description": "青松建化(600425.SH)专项风险评估模型，计算下行风险位、仓位建议、止损触发条件",
+      "category": "risk_rule",
+      "creator": "risk",
+      "approved": false,
+      "file": "skill_risk_assessment_qingsong_1772971507.py",
+      "created_at": 1772971508.006936
+    },
+    {
+      "id": "skill_price_forecast_quant_1772971631",
+      "name": "price_forecast_quant",
+      "description": "基于多因子模型的个股上半年价格区间预测技能，综合技术面、估值面、基本面、资金面因子",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_price_forecast_quant_1772971631.py",
+      "created_at": 1772971631.462571
+    },
+    {
+      "id": "skill_price_forecast_simple_1772971676",
+      "name": "price_forecast_simple",
+      "description": "简化版个股价格区间预测技能，基于多因子评分模型",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_price_forecast_simple_1772971676.py",
+      "created_at": 1772971676.159806
+    },
+    {
+      "id": "skill_price_forecast_v3_1772971704",
+      "name": "price_forecast_v3",
+      "description": "极简版个股价格区间预测技能，无外部依赖",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_price_forecast_v3_1772971704.py",
+      "created_at": 1772971704.0253289
+    },
+    {
+      "id": "skill_restructuring_risk_analyzer_1773146824",
+      "name": "restructuring_risk_analyzer",
+      "description": "重组预期风险量化分析工具：计算重组溢价比例、下行风险空间、融资盘敏感度",
+      "category": "data_analysis",
+      "creator": "risk",
+      "approved": true,
+      "file": "skill_restructuring_risk_analyzer_1773146824.py",
+      "created_at": 1773146824.694218
+    },
+    {
+      "id": "skill_restructuring_risk_v2_1773146837",
+      "name": "restructuring_risk_v2",
+      "description": "重组预期风险量化分析工具（简化版）",
+      "category": "data_analysis",
+      "creator": "risk",
+      "approved": true,
+      "file": "skill_restructuring_risk_v2_1773146837.py",
+      "created_at": 1773146837.9799528
+    },
+    {
+      "id": "skill_valuation_percentile_1773146921",
+      "name": "valuation_percentile",
+      "description": "计算估值历史分位（PE/PB百分位）",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_valuation_percentile_1773146921.py",
+      "created_at": 1773146921.6439528
+    },
+    {
+      "id": "skill_valuation_percentile_simple_1773146936",
+      "name": "valuation_percentile_simple",
+      "description": "计算估值历史分位（PE/PB百分位）- 简化版",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_valuation_percentile_simple_1773146936.py",
+      "created_at": 1773146936.363442
+    },
+    {
+      "id": "skill_annual_report_strategy_backtest_1773192143",
+      "name": "annual_report_strategy_backtest",
+      "description": "回测年报前建仓vs年报后建仓策略的胜率和盈亏比",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_annual_report_strategy_backtest_1773192143.py",
+      "created_at": 1773192143.521995
+    },
+    {
+      "id": "skill_annual_report_analysis_1773192266",
+      "name": "annual_report_analysis",
+      "description": "分析年报披露后5/10/20日股价表现规律",
+      "category": "data_analysis",
+      "creator": "analyst",
+      "approved": true,
+      "file": "skill_annual_report_analysis_1773192266.py",
+      "created_at": 1773192266.2837608
+    },
+    {
+      "id": "skill_ma200_calculator_1773316943",
+      "name": "ma200_calculator",
+      "description": "计算200日均线及当前价格相对位置",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_ma200_calculator_1773316943.py",
+      "created_at": 1773316943.521271
+    },
+    {
+      "id": "skill_chip_winrate_analyzer_1773972156",
+      "name": "chip_winrate_analyzer",
+      "description": "筹码胜率分析：计算筹码胜率历史分位数、年报后胜率统计、套牢盘比例",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_chip_winrate_analyzer_1773972156.py",
+      "created_at": 1773972156.716387
+    },
+    {
+      "id": "skill_chip_winrate_analyzer_v2_1773972233",
+      "name": "chip_winrate_analyzer_v2",
+      "description": "筹码胜率分析 v2：计算筹码胜率历史分位数、年报后胜率统计、套牢盘比例（简化版）",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_chip_winrate_analyzer_v2_1773972233.py",
+      "created_at": 1773972233.8305862
+    },
+    {
+      "id": "skill_chip_winrate_simple_1773972373",
+      "name": "chip_winrate_simple",
+      "description": "筹码胜率分析（纯 Python 标准库版）：计算历史分位数、年报后胜率、套牢盘比例",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_chip_winrate_simple_1773972373.py",
+      "created_at": 1773972373.114996
+    },
+    {
+      "id": "skill_asset_injection_risk_model_1774596310",
+      "name": "asset_injection_risk_model",
+      "description": "资产注入预期量化风险评估模型：基于传闻可信度、历史成功率、基本面和估值计算风险调整后期望收益和仓位建议",
+      "category": "risk_rule",
+      "creator": "quant",
+      "approved": false,
+      "file": "skill_asset_injection_risk_model_1774596310.py",
+      "created_at": 1774596310.428313
+    },
+    {
+      "id": "skill_asset_injection_quant_model_1774599541",
+      "name": "asset_injection_quant_model",
+      "description": "资产注入预期量化评估模型：综合基本面、技术面、传闻可信度、市场环境，计算风险调整后期望收益和交易建议",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_asset_injection_quant_model_1774599541.py",
+      "created_at": 1774599541.054007
+    },
+    {
+      "id": "skill_asset_injection_score_simple_1774599563",
+      "name": "asset_injection_score_simple",
+      "description": "资产注入预期量化评估模型（简化版）：综合基本面、技术面、传闻可信度、市场环境，计算风险调整后期望收益和交易建议",
+      "category": "data_analysis",
+      "creator": "quant",
+      "approved": true,
+      "file": "skill_asset_injection_score_simple_1774599563.py",
+      "created_at": 1774599563.292567
+    }
+  ],
+  "version": "1.0"
+}

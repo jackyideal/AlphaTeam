@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}K线匹配预测{% endblock %}
+
+{% block content %}
+<div class="stock-page">
+    <div class="stock-header">
+        <h1>🧩 K线匹配预测</h1>
+        <p class="indicator-desc">历史结构检索 · 相似阶段对照 · 未来区间统计</p>
+    </div>
+
+    <div class="input-card">
+        <div class="input-section">
+            <div class="input-group">
+                <label for="pattern-stock-code">股票代码</label>
+                <input type="text" id="pattern-stock-code" value="600425.SH" placeholder="如 600425.SH">
+            </div>
+            <div class="input-group">
+                <label for="pattern-start-date">起始日期</label>
+                <input type="date" id="pattern-start-date" value="1990-01-01" min="1990-01-01" max="2026-12-31">
+            </div>
+            <div class="input-group">
+                <label for="pattern-freq">频率</label>
+                <select id="pattern-freq">
+                    <option value="D" selected>日线</option>
+                    <option value="W">周线</option>
+                    <option value="M">月线</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="pattern-window">结构窗口N</label>
+                <input type="number" id="pattern-window" value="40" min="12" max="240" step="1">
+            </div>
+            <div class="input-group">
+                <label for="pattern-topk">匹配数量</label>
+                <input type="number" id="pattern-topk" value="5" min="1" max="10" step="1">
+            </div>
+            <div class="input-group">
+                <label for="pattern-horizons">预测步长</label>
+                <input type="text" id="pattern-horizons" value="5,10,20" placeholder="如 5,10,20">
+            </div>
+            <button id="btn-pattern-query" class="btn btn-primary" onclick="runPatternPageMatch()">
+                开始匹配
+            </button>
+        </div>
+    </div>
+
+    <div class="pattern-weight-note" style="margin:10px 0 8px;">
+        默认权重：价格结构 = 100%，成交量/MACD/KDJ = 0%
+    </div>
+    <div id="pattern-page-status" class="stock-data-status" style="display:none;"></div>
+
+    <div id="pattern-page-summary" class="pattern-summary-grid" style="display:none;"></div>
+    <div id="pattern-page-table-wrap" class="fina-table-wrapper" style="display:none; margin-bottom:12px;">
+        <table id="pattern-page-table" class="fina-table"></table>
+    </div>
+
+    <div id="pattern-page-target-wrap" class="pattern-target-wrap" style="display:none;">
+        <h3 class="pattern-subtitle">当前结构（目标片段）</h3>
+        <div id="pattern-page-target-chart" class="stock-chart-container pattern-chart-box"></div>
+    </div>
+
+    <div id="pattern-page-matches" class="pattern-matches-grid"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/static/js/stock_pattern.js?v={{ asset_version }}"></script>
+{% endblock %}

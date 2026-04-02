@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="rocketGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff4444"/>
+      <stop offset="50%" stop-color="#ff2222"/>
+      <stop offset="100%" stop-color="#ff6633"/>
+    </linearGradient>
+    <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#ff4444"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Hexagonal tech frame -->
+  <polygon points="24,2 44,14 44,34 24,46 4,34 4,14"
+           fill="none" stroke="rgba(255,68,68,0.12)" stroke-width="0.8"/>
+  <!-- Rocket body -->
+  <path d="M24,6 C24,6 18,16 18,28 C18,32 20,35 24,36 C28,35 30,32 30,28 C30,16 24,6 24,6Z"
+        fill="url(#rocketGrad)" opacity="0.9" filter="url(#glow)"/>
+  <!-- Rocket window -->
+  <circle cx="24" cy="20" r="3" fill="#0a0e17" stroke="#ffd700" stroke-width="0.8"/>
+  <circle cx="24" cy="20" r="1.5" fill="#ffd700" opacity="0.6"/>
+  <!-- Left fin -->
+  <path d="M18,28 L12,34 L16,35 L18,32Z" fill="#cc1111" opacity="0.8"/>
+  <!-- Right fin -->
+  <path d="M30,28 L36,34 L32,35 L30,32Z" fill="#cc1111" opacity="0.8"/>
+  <!-- Flame -->
+  <path d="M21,36 Q24,44 27,36 Q24,40 21,36Z" fill="url(#flameGrad)" opacity="0.9">
+    <animate attributeName="d"
+      values="M21,36 Q24,44 27,36 Q24,40 21,36Z;M22,36 Q24,42 26,36 Q24,39 22,36Z;M21,36 Q24,44 27,36 Q24,40 21,36Z"
+      dur="0.6s" repeatCount="indefinite"/>
+  </path>
+  <path d="M22.5,36 Q24,41 25.5,36 Q24,39 22.5,36Z" fill="#ffd700" opacity="0.8">
+    <animate attributeName="d"
+      values="M22.5,36 Q24,41 25.5,36 Q24,39 22.5,36Z;M23,36 Q24,39 25,36 Q24,38 23,36Z;M22.5,36 Q24,41 25.5,36 Q24,39 22.5,36Z"
+      dur="0.4s" repeatCount="indefinite"/>
+  </path>
+  <!-- Nose tip glow -->
+  <circle cx="24" cy="7" r="1.5" fill="#ffd700" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.5s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="1.5;2.2;1.5" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}行业时空图谱{% endblock %}
+
+{% block content %}
+<div class="industry-map-page">
+    <div class="stock-header industry-map-hero">
+        <h1>🫧 行业时空图谱</h1>
+        <p class="indicator-desc">
+            同级行业横向比较：Y轴为区间累计涨幅，X轴可切换估值/成交/单日强弱，并叠加青松建化定位点。
+        </p>
+    </div>
+
+    <div class="input-card industry-map-input-card">
+        <div class="input-section">
+            <div class="input-group">
+                <label for="im-level">行业层级</label>
+                <select id="im-level">
+                    <option value="L1" selected>一级行业（L1）</option>
+                    <option value="L2">二级行业（L2）</option>
+                    <option value="L3">三级行业（L3）</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="im-start-date">起始日期</label>
+                <input type="date" id="im-start-date" value="2024-09-24" min="2010-01-01" max="2026-12-31">
+            </div>
+            <div class="input-group">
+                <label for="im-end-date">结束日期</label>
+                <input type="date" id="im-end-date" min="2010-01-01" max="2026-12-31">
+            </div>
+            <div class="input-group">
+                <label for="im-x-metric">X轴指标</label>
+                <select id="im-x-metric" onchange="onXMetricChanged()">
+                    <option value="pct_change" selected>最近交易日涨跌幅</option>
+                    <option value="x_interval_return">指定区间累计涨跌幅</option>
+                    <option value="amount">成交额</option>
+                    <option value="pe">市盈率 PE</option>
+                    <option value="pb">市净率 PB</option>
+                    <option value="total_mv">总市值</option>
+                    <option value="float_mv">流通市值</option>
+                </select>
+            </div>
+            <div class="input-group im-x-interval-group" id="im-x-start-wrap" style="display:none;">
+                <label for="im-x-start-date">X轴区间起</label>
+                <input type="date" id="im-x-start-date" min="2010-01-01" max="2026-12-31">
+            </div>
+            <div class="input-group im-x-interval-group" id="im-x-end-wrap" style="display:none;">
+                <label for="im-x-end-date">X轴区间止</label>
+                <input type="date" id="im-x-end-date" min="2010-01-01" max="2026-12-31">
+            </div>
+            <div class="input-group">
+                <label for="im-bubble-metric">气泡大小</label>
+                <select id="im-bubble-metric">
+                    <option value="amount" selected>成交额</option>
+                    <option value="total_mv">总市值</option>
+                    <option value="float_mv">流通市值</option>
+                    <option value="pct_change">单日涨跌幅</option>
+                    <option value="pe">市盈率 PE</option>
+                    <option value="pb">市净率 PB</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="im-target-code">对照个股</label>
+                <input type="text" id="im-target-code" value="600425.SH" placeholder="如 600425.SH">
+            </div>
+            <button class="btn btn-primary" id="im-query-btn" onclick="loadIndustryMap()">生成图谱</button>
+        </div>
+    </div>
+
+    <div id="im-status" class="industry-map-status state-idle">状态：待加载</div>
+
+    <div class="industry-map-kpi-grid">
+        <article class="industry-map-kpi-card">
+            <h3>行业样本数</h3>
+            <p id="im-kpi-count">--</p>
+        </article>
+        <article class="industry-map-kpi-card">
+            <h3>图谱时间窗口</h3>
+            <p id="im-kpi-window">--</p>
+        </article>
+        <article class="industry-map-kpi-card">
+            <h3>中位数参考线</h3>
+            <p id="im-kpi-median">X: -- / Y: --</p>
+        </article>
+    </div>
+
+    <div class="industry-map-layout">
+        <section class="industry-map-chart-card">
+            <div class="industry-map-card-head">
+                <h2>行业气泡图谱</h2>
+                <div class="industry-map-head-actions">
+                    <span id="im-window-detail">等待查询...</span>
+                    <button id="im-immersive-btn" class="btn btn-outline btn-sm" onclick="toggleIndustryImmersive()">
+                        巨屏模式
+                    </button>
+                </div>
+            </div>
+            <div id="industry-map-chart" class="industry-map-chart"></div>
+        </section>
+
+        <aside class="industry-map-side">
+            <section class="industry-map-side-card">
+                <div class="industry-map-card-head">
+                    <h2>青松建化定位</h2>
+                </div>
+                <div id="im-target-card" class="industry-map-target-card">
+                    <p class="muted">等待查询...</p>
+                </div>
+            </section>
+
+            <section class="industry-map-side-card">
+                <div class="industry-map-card-head">
+                    <h2>相似行业 Top 5</h2>
+                </div>
+                <div id="im-similar-list" class="industry-map-similar-list">
+                    <p class="muted">等待查询...</p>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <section class="industry-map-table-card">
+        <div class="industry-map-card-head">
+            <h2>行业明细表</h2>
+            <span>支持按图谱值进行横向核对</span>
+        </div>
+        <div class="industry-map-table-wrap">
+            <table class="industry-map-table" id="im-table">
+                <thead>
+                <tr>
+                    <th>名称</th>
+                    <th>代码</th>
+                    <th>区间累计涨幅(%)</th>
+                    <th>最近交易日涨跌幅(%)</th>
+                    <th>PE</th>
+                    <th>PB</th>
+                    <th>总市值</th>
+                    <th>流通市值</th>
+                    <th>成交额</th>
+                </tr>
+                </thead>
+                <tbody id="im-table-body">
+                <tr>
+                    <td colspan="9" class="res-empty-cell">等待查询...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/static/js/industry_map.js?v={{ asset_version }}"></script>
+{% endblock %}

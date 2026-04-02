@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+
+{% block title %}盘后复盘{% endblock %}
+
+{% block content %}
+<div class="review-lab">
+    <section class="review-hero">
+        <div class="review-hero-main">
+            <h1>🧾 盘后复盘 · 指标深度看板</h1>
+            <p>基于 AlphaFin 核心指标体系，聚合市场、行业、资金、宏观多维图表。以模块化流水线生成复盘内容，并展示实时进度与预计完成时间。</p>
+        </div>
+        <div class="review-hero-meta">
+            <span class="review-chip" id="review-date-chip">复盘交易日: --</span>
+            <span class="review-chip" id="review-policy-chip">口径: --</span>
+            <span class="review-chip" id="review-generated-chip">快照时间: --</span>
+        </div>
+    </section>
+
+    <section class="review-controls">
+        <button id="review-start-btn" class="btn btn-primary" onclick="startPostReview(false)">开始生成盘后复盘</button>
+        <label class="ai-search-switch" title="打开页面后自动开始生成复盘图表">
+            <input type="checkbox" id="review-auto-run" onchange="persistReviewAutoRun()">
+            自动生成
+        </label>
+        <span class="review-run-state" id="review-run-state">状态：待启动</span>
+    </section>
+
+    <section class="review-overall">
+        <div class="review-overall-bar">
+            <div class="review-overall-fill" id="review-overall-fill"></div>
+        </div>
+        <div class="review-overall-meta">
+            <span id="review-overall-text">进度：0%</span>
+            <span id="review-time-text">耗时：00:00 ｜ 预计剩余：--</span>
+        </div>
+    </section>
+
+    <section class="review-module-wrap">
+        <div class="review-section-head">
+            <h2>本次复盘模块</h2>
+            <span id="review-module-hint">共 0 个指标模块</span>
+        </div>
+        <div class="review-module-grid" id="review-module-grid"></div>
+    </section>
+
+    <section class="review-charts-wrap">
+        <div class="review-section-head">
+            <h2>复盘图表总览</h2>
+            <span id="review-chart-hint">将按模块依次载入图表</span>
+        </div>
+        <div class="review-chart-sections" id="review-chart-sections">
+            <div class="review-empty" id="review-empty">点击“开始生成盘后复盘”后，将在此展示图表。</div>
+        </div>
+    </section>
+</div>
+
+<script>
+    var REVIEW_MODULES = [
+        {
+            id: 'ind_01_volume_strategy',
+            name: '大盘成交量策略',
+            subtitle: '量能与买卖信号',
+            params: {start_date: '20180101'},
+            picks: [0, 1]
+        },
+        {
+            id: 'ind_25_margin_financing',
+            name: '融资融券指标',
+            subtitle: '杠杆资金行为',
+            params: {ts_code: '600425.SH', start_date: '20180101'},
+            picks: [0, 1]
+        },
+        {
+            id: 'ind_26_market_volatility',
+            name: '市场波动率指标',
+            subtitle: '不确定性与波动分解',
+            params: {start_date: '20170101'},
+            picks: [1, 2]
+        },
+        {
+            id: 'ind_10_shibor',
+            name: 'SHIBOR/DR007利率',
+            subtitle: '利率中枢与流动性',
+            params: {start_date: '20150101'},
+            picks: [0, 4, 6]
+        },
+        {
+            id: 'ind_13_cny',
+            name: '人民币汇率',
+            subtitle: '汇率传导与股市联动',
+            params: {start_date: '20170101'},
+            picks: [0, 4, 6]
+        },
+        {
+            id: 'ind_04_pe_risk',
+            name: '市盈率倒数风险程度',
+            subtitle: '股债性价比风险',
+            params: {start_date: '20100101'},
+            picks: [0, 1]
+        }
+    ];
+
+    var reviewRun = {
+        running: false,
+        startTs: 0,
+        currentIdx: -1,
+        moduleState: {},
+        totalCharts: 0
+    };
+
+    function initPostReviewLab() {
+        var moduleHint = document.getElementById('review-module-hint');
+        if (moduleHint) moduleHint.textContent = '共 ' + REVIEW_MODULES.length + ' 个指标模块';
+
+        REVIEW_MODULES.forEach(function(m) {
+            reviewRun.moduleState[m.id] = {
+                status: 'pending',
+                step: 0,
+                total: 1,
+                message: '等待执行',
+                startedAt: 0,
+                endedAt: 0,
+                taskId: '',
+                chartCount: 0,
+                error: ''
+            };
+        });
+
+        renderModuleCards();
+        restoreReviewAutoRun();
+        refreshReviewMeta();
+        updateOverallProgress();
+
+        if (isAutoRunEnabled()) {
+            startPostReview(true);
+        }
+    }
+
+    function renderModuleCards() {
+        var box = document.getElementById('review-module-grid');
+        if (!box) return;
+        box.innerHTML = REVIEW_MODULES.map(function(m, idx) {
+            return '' +
+                '<article class="review-module-card" id="review-module-' + escapeHtml(m.id) + '">' +
+                '<div class="review-module-head">' +
+                '<div class="review-module-title">' +
+                '<h3>' + (idx + 1) + '. ' + escapeHtml(m.name) + '</h3>' +
+                '<p>' + escapeHtml(m.subtitle || '') + '</p>' +
+                '</div>' +
+                '<span class="review-module-badge badge-pending" id="review-badge-' + escapeHtml(m.id) + '">待执行</span>' +
+                '</div>' +
+                '<div class="review-module-progress"><div class="review-module-fill" id="review-fill-' + escapeHtml(m.id) + '"></div></div>' +
+                '<div class="review-module-meta" id="review-meta-' + escapeHtml(m.id) + '">等待执行</div>' +
+                '</article>';
+        }).join('');
+    }
+
+    function setRunState(text, level) {
+        var el = document.getElementById('review-run-state');
+        if (!el) return;
+        el.textContent = '状态：' + String(text || '--');
+        el.classList.remove('state-ok', 'state-loading', 'state-error', 'state-idle');
+        if (level === 'ok') el.classList.add('state-ok');
+        else if (level === 'loading') el.classList.add('state-loading');
+        else if (level === 'error') el.classList.add('state-error');
+        else el.classList.add('state-idle');
+    }
+
+    function setModuleStatus(moduleId, patch) {
+        var st = reviewRun.moduleState[moduleId] || {};
+        Object.keys(patch || {}).forEach(function(k) { st[k] = patch[k]; });
+        reviewRun.moduleState[moduleId] = st;
+
+        var badge = document.getElementById('review-badge-' + moduleId);
+        var fill = document.getElementById('review-fill-' + moduleId);
+        var meta = document.getElementById('review-meta-' + moduleId);
+
+        var status = st.status || 'pending';
+        var textMap = {pending: '待执行', running: '运行中', done: '完成', fail: '失败'};
+        var badgeClass = 'badge-' + status;
+
+        if (badge) {
+            badge.className = 'review-module-badge ' + badgeClass;
+            badge.textContent = textMap[status] || '待执行';
+        }
+
+        var pct = 0;
+        var total = toNumber(st.total);
+        var step = toNumber(st.step);
+        if (total && total > 0 && step !== null) pct = Math.max(0, Math.min(100, (step / total) * 100));
+        if (status === 'done') pct = 100;
+        if (fill) fill.style.width = pct.toFixed(1) + '%';
+
+        var msg = st.message || '等待执行';
+        if (meta) {
+            var prefix = '[' + (step === null ? 0 : step) + '/' + (total || 0) + '] ';
+            if (status === 'pending') prefix = '';
+            if (status === 'fail') prefix = '[失败] ';
+            if (status === 'done') prefix = '[完成] ';
+            meta.textContent = prefix + msg;
+        }
+    }
+
+    function clearChartSections() {
+        reviewRun.totalCharts = 0;
+        var box = document.getElementById('review-chart-sections');
+        if (!box) return;
+        box.innerHTML = '<div class="review-empty" id="review-empty">正在准备图表区域...</div>';
+        document.getElementById('review-chart-hint').textContent = '将按模块依次载入图表';
+    }
+
+    function ensureModuleSection(module) {
+        var box = document.getElementById('review-chart-sections');
+        if (!box) return null;
+
+        var empty = document.getElementById('review-empty');
+        if (empty) empty.remove();
+
+        var secId = 'review-sec-' + module.id;
+        var sec = document.getElementById(secId);
+        if (sec) return sec;
+
+        sec = document.createElement('section');
+        sec.className = 'review-chart-section';
+        sec.id = secId;
+        sec.innerHTML = '' +
+            '<div class="review-chart-head">' +
+            '<h3>' + escapeHtml(module.name) + '</h3>' +
+            '<span id="review-sec-meta-' + escapeHtml(module.id) + '">等待图表...</span>' +
+            '</div>' +
+            '<div class="review-chart-grid" id="review-grid-' + escapeHtml(module.id) + '"></div>';
+        box.appendChild(sec);
+        return sec;
+    }
+
+    function renderModuleCharts(module, chartPaths, chartTitles) {
+        ensureModuleSection(module);
+        var grid = document.getElementById('review-grid-' + module.id);
+        var meta = document.getElementById('review-sec-meta-' + module.id);
+        if (!grid || !meta) return;
+
+        var picks = (module.picks && module.picks.length) ? module.picks : [];
+        if (!picks.length) {
+            for (var i = 0; i < (chartPaths || []).length; i++) picks.push(i);
+        }
+
+        var cards = [];
+        picks.forEach(function(idx) {
+            if (!chartPaths || !chartPaths[idx]) return;
+            var title = chartTitles && chartTitles[idx] ? chartTitles[idx] : ('图表 ' + (idx + 1));
+            cards.push('' +
+                '<article class="review-chart-card">' +
+                '<div class="review-chart-title">' +
+                '<span class="review-chart-tag">' + escapeHtml(module.name) + '</span>' +
+                '<span class="review-chart-name">' + escapeHtml(title) + '</span>' +
+                '</div>' +
+                '<img src="' + escapeHtml(chartPaths[idx]) + '" alt="' + escapeHtml(title) + '" loading="lazy">' +
+                '</article>');
+        });
+
+        if (!cards.length) {
+            grid.innerHTML = '<div class="review-empty">当前模块未生成可展示图表。</div>';
+            meta.textContent = '未生成图表';
+            return;
+        }
+
+        reviewRun.totalCharts += cards.length;
+        grid.innerHTML = cards.join('');
+        meta.textContent = '已展示 ' + cards.length + ' 张图';
+        document.getElementById('review-chart-hint').textContent = '当前已加载 ' + reviewRun.totalCharts + ' 张图表';
+    }
+
+    async function refreshReviewMeta() {
+        try {
+            var res = await fetch('/api/ai_watch/snapshot?include_news=0&force=0', {cache: 'no-store'});
+            var payload = await res.json();
+            var review = payload.review || {};
+            document.getElementById('review-date-chip').textContent = '复盘交易日: ' + (review.trade_date || '--');
+            document.getElementById('review-policy-chip').textContent = review.used_previous ? '口径: 未收盘回退至上一交易日' : '口径: 盘后当日复盘';
+            document.getElementById('review-generated-chip').textContent = '快照时间: ' + (payload.generated_at || '--');
+        } catch (e) {
+            document.getElementById('review-date-chip').textContent = '复盘交易日: --';
+            document.getElementById('review-policy-chip').textContent = '口径: --';
+            document.getElementById('review-generated-chip').textContent = '快照时间: --';
+        }
+    }
+
+    async function startPostReview(fromAuto) {
+        if (reviewRun.running) return;
+
+        await refreshReviewMeta();
+        clearChartSections();
+
+        REVIEW_MODULES.forEach(function(m) {
+            setModuleStatus(m.id, {
+                status: 'pending',
+                step: 0,
+                total: 1,
+                message: '等待执行',
+                startedAt: 0,
+                endedAt: 0,
+                taskId: '',
+                chartCount: 0,
+                error: ''
+            });
+        });
+
+        reviewRun.running = true;
+        reviewRun.startTs = Date.now();
+        reviewRun.currentIdx = -1;
+
+        var btn = document.getElementById('review-start-btn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+        }
+
+        setRunState('复盘任务执行中', 'loading');
+        updateOverallProgress();
+
+        for (var i = 0; i < REVIEW_MODULES.length; i++) {
+            reviewRun.currentIdx = i;
+            await runSingleModule(REVIEW_MODULES[i]);
+            updateOverallProgress();
+        }
+
+        reviewRun.running = false;
+        reviewRun.currentIdx = -1;
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '重新生成盘后复盘';
+        }
+        setRunState('本轮复盘完成', 'ok');
+        updateOverallProgress(true);
+    }
+
+    async function runSingleModule(module) {
+        setModuleStatus(module.id, {
+            status: 'running',
+            step: 0,
+            total: 1,
+            message: '提交计算任务...',
+            startedAt: Date.now(),
+            endedAt: 0,
+            taskId: '',
+            chartCount: 0,
+            error: ''
+        });
+        updateOverallProgress();
+
+        try {
+            var res = await fetch('/api/compute/' + encodeURIComponent(module.id), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(module.params || {})
+            });
+            var data = await res.json();
+            var taskId = data && data.task_id ? String(data.task_id) : '';
+            if (!taskId) throw new Error('未返回 task_id');
+
+            setModuleStatus(module.id, {taskId: taskId, message: '任务已提交，等待进度...'});
+            var doneInfo = await trackTaskProgress(module, taskId);
+
+            var chartPaths = (doneInfo && doneInfo.chart_paths) ? doneInfo.chart_paths : [];
+            var chartTitles = (doneInfo && doneInfo.chart_titles) ? doneInfo.chart_titles : [];
+            var msg = (doneInfo && doneInfo.message) ? String(doneInfo.message) : '完成';
+
+            if (!chartPaths.length) {
+                setModuleStatus(module.id, {
+                    status: 'fail',
+                    message: msg || '未生成图表',
+                    endedAt: Date.now(),
+                    error: msg || '未生成图表'
+                });
+                return;
+            }
+
+            renderModuleCharts(module, chartPaths, chartTitles);
+            setModuleStatus(module.id, {
+                status: 'done',
+                step: (doneInfo && doneInfo.total) ? doneInfo.total : chartPaths.length,
+                total: (doneInfo && doneInfo.total) ? doneInfo.total : chartPaths.length,
+                message: '成功生成 ' + chartPaths.length + ' 张图表',
+                chartCount: chartPaths.length,
+                endedAt: Date.now()
+            });
+        } catch (err) {
+            setModuleStatus(module.id, {
+                status: 'fail',
+                message: String(err || '模块执行失败'),
+                endedAt: Date.now(),
+                error: String(err || '模块执行失败')
+            });
+        }
+    }
+
+    function trackTaskProgress(module, taskId) {
+        return new Promise(function(resolve) {
+            var done = false;
+            var es = null;
+
+            function finish(info) {
+                if (done) return;
+                done = true;
+                try { if (es) es.close(); } catch (e) {}
+                resolve(info || {});
+            }
+
+            function fetchFinal() {
+                fetch('/api/charts/' + encodeURIComponent(taskId), {cache: 'no-store'})
+                    .then(function(r) { return r.json(); })
+                    .then(function(info) {
+                        finish({
+                            done: !!info.done,
+                            message: info.message || '完成',
+                            chart_paths: info.charts || [],
+                            chart_titles: info.titles || [],
+                            step: (info.charts || []).length,
+                            total: (info.charts || []).length
+                        });
+                    })
+                    .catch(function() {
+                        finish({done: true, message: '任务结束但结果获取失败', chart_paths: [], chart_titles: []});
+                    });
+            }
+
+            try {
+                es = new EventSource('/api/progress/' + encodeURIComponent(taskId));
+            } catch (e) {
+                fetchFinal();
+                return;
+            }
+
+            es.onmessage = function(event) {
+                var info = {};
+                try { info = JSON.parse(event.data || '{}'); } catch (e) { info = {}; }
+                setModuleStatus(module.id, {
+                    step: toNumber(info.step) || 0,
+                    total: toNumber(info.total) || 1,
+                    message: String(info.message || '执行中...')
+                });
+                updateOverallProgress();
+
+                if (info.done) {
+                    if (info.chart_paths || info.chart_titles) {
+                        finish(info);
+                    } else {
+                        fetchFinal();
+                    }
+                }
+            };
+
+            es.onerror = function() {
+                try { es.close(); } catch (e) {}
+                fetchFinal();
+            };
+        });
+    }
+
+    function updateOverallProgress(forceDone) {
+        var totalModules = REVIEW_MODULES.length;
+        var finished = 0;
+        var runningFrac = 0;
+
+        REVIEW_MODULES.forEach(function(m, idx) {
+            var st = reviewRun.moduleState[m.id] || {};
+            if (st.status === 'done' || st.status === 'fail') {
+                finished += 1;
+            } else if (reviewRun.running && idx === reviewRun.currentIdx && st.status === 'running') {
+                var step = toNumber(st.step) || 0;
+                var total = toNumber(st.total) || 1;
+                runningFrac = Math.max(0, Math.min(1, step / total));
+            }
+        });
+
+        var ratio = totalModules > 0 ? (finished + runningFrac) / totalModules : 0;
+        if (forceDone) ratio = 1;
+        ratio = Math.max(0, Math.min(1, ratio));
+
+        var fill = document.getElementById('review-overall-fill');
+        var text = document.getElementById('review-overall-text');
+        var timeText = document.getElementById('review-time-text');
+
+        if (fill) fill.style.width = (ratio * 100).toFixed(1) + '%';
+        if (text) text.textContent = '进度：' + (ratio * 100).toFixed(1) + '% ｜ 已完成 ' + finished + '/' + totalModules + ' 模块';
+
+        var elapsedMs = reviewRun.startTs ? (Date.now() - reviewRun.startTs) : 0;
+        var etaText = '--';
+        if (ratio > 0 && ratio < 1 && reviewRun.running) {
+            var etaMs = elapsedMs * (1 - ratio) / ratio;
+            etaText = formatDuration(etaMs);
+        }
+        if (ratio >= 1) etaText = '00:00';
+        if (timeText) {
+            timeText.textContent = '耗时：' + formatDuration(elapsedMs) + ' ｜ 预计剩余：' + etaText;
+        }
+    }
+
+    function formatDuration(ms) {
+        var sec = Math.max(0, Math.floor((ms || 0) / 1000));
+        var h = Math.floor(sec / 3600);
+        var m = Math.floor((sec % 3600) / 60);
+        var s = sec % 60;
+        if (h > 0) return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function persistReviewAutoRun() {
+        var box = document.getElementById('review-auto-run');
+        try {
+            localStorage.setItem('alphafin_post_review_auto_run', box && box.checked ? '1' : '0');
+        } catch (e) {}
+    }
+
+    function restoreReviewAutoRun() {
+        var box = document.getElementById('review-auto-run');
+        if (!box) return;
+        try {
+            box.checked = localStorage.getItem('alphafin_post_review_auto_run') === '1';
+        } catch (e) {
+            box.checked = false;
+        }
+    }
+
+    function isAutoRunEnabled() {
+        var box = document.getElementById('review-auto-run');
+        return !!(box && box.checked);
+    }
+
+    function toNumber(v) {
+        if (v === null || v === undefined || v === '') return null;
+        var n = Number(v);
+        if (Number.isNaN(n)) return null;
+        return n;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = String(text || '');
+        return div.innerHTML;
+    }
+
+    initPostReviewLab();
+</script>
+{% endblock %}

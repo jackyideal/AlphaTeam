@@ -1,0 +1,765 @@
+{% extends "base.html" %}
+{% block title %}AlphaTeam{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/team_static/css/ai_team.css?v={{ asset_version }}">
+
+<div class="team-container" id="team-root">
+    <!-- 顶部控制栏 -->
+    <div class="team-header">
+        <div class="team-title-section">
+            <h1 class="team-title">🧠 AlphaFin AlphaTeam</h1>
+            <span class="team-subtitle">多智能体协同研究中枢 · 实时情报融合引擎 · 量化决策闭环执行系统</span>
+            <div class="team-header-note">以聊天为主入口，3D 办公场景与右侧审视栏作为辅助透视层。</div>
+        </div>
+        <div class="team-controls">
+            <div class="team-header-pills">
+                <span class="team-header-pill">聊天主界面</span>
+                <span class="team-header-pill">团队工作流可解释</span>
+                <span class="team-header-pill">长期记忆可编辑</span>
+            </div>
+            <details class="control-details">
+                <summary>研究与学习参数</summary>
+                <div class="control-group">
+                    <div class="cycle-config">
+                        <label>研究周期:</label>
+                        <select id="cycle-interval" onchange="updateCycleInterval()">
+                            <option value="3600">1小时</option>
+                            <option value="7200">2小时</option>
+                            <option value="14400" selected>4小时</option>
+                            <option value="28800">8小时</option>
+                            <option value="0">仅手动</option>
+                        </select>
+                    </div>
+                    <div class="cycle-config">
+                        <label>闲时学习:</label>
+                        <input type="checkbox" id="idle-enabled" onchange="toggleIdleEnabled()">
+                        <select id="idle-interval" onchange="updateIdleInterval()">
+                            <option value="1800">30分钟</option>
+                            <option value="3600">1小时</option>
+                            <option value="7200" selected>2小时</option>
+                            <option value="14400">4小时</option>
+                        </select>
+                    </div>
+                    <div class="cycle-config">
+                        <label>同事闲聊:</label>
+                        <input type="checkbox" id="office-chat-enabled" onchange="toggleOfficeChatEnabled()">
+                        <select id="office-chat-interval" onchange="updateOfficeChatInterval()">
+                            <option value="1800">30分钟</option>
+                            <option value="3600">1小时</option>
+                            <option value="7200">2小时</option>
+                            <option value="10800" selected>3小时</option>
+                            <option value="14400">4小时</option>
+                        </select>
+                    </div>
+                    <div class="cycle-config cycle-config-time-limit">
+                        <label>统一任务时限:</label>
+                        <select id="unified-task-time-limit" onchange="updateUnifiedTaskTimeLimit()">
+                            <option value="3">3分钟</option>
+                            <option value="5">5分钟</option>
+                            <option value="8" selected>8分钟</option>
+                            <option value="10">10分钟</option>
+                            <option value="12">12分钟</option>
+                            <option value="15">15分钟</option>
+                            <option value="20">20分钟</option>
+                        </select>
+                        <span class="cycle-note">用于团队协作 / 手动分析 / 投资手动执行</span>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <div id="session-timing-banner" class="team-session-timing-banner" style="display:none;"></div>
+    <div id="session-progress-board" class="team-session-progress" style="display:none;"></div>
+    <div id="session-overtime-panel" class="team-session-overtime" style="display:none;"></div>
+    <div id="team-runtime-alert" class="team-runtime-alert" style="display:none;"></div>
+
+    <!-- 主体区域：3D场景 + 侧面板 -->
+    <div class="team-body">
+        <div class="workspace-column">
+            <div class="scene-shell" id="team-scene-shell">
+                <div class="scene-shell-head">
+                    <div class="scene-shell-title-wrap">
+                        <div class="scene-shell-title">3D 办公场景</div>
+                        <div class="scene-shell-subtitle">可视化展示团队位置、会议状态与工具动作。关闭后可提升页面流畅度。</div>
+                    </div>
+                    <div class="scene-shell-actions">
+                        <button id="btn-toggle-workbench" class="btn btn-outline btn-sm" onclick="toggleWorkbench()">沉浸场景</button>
+                    </div>
+                </div>
+                <div id="scene-shell-collapsed" class="scene-shell-collapsed" style="display:none;">
+                    <div class="scene-shell-collapsed-title">3D 场景已关闭</div>
+                    <div class="scene-shell-collapsed-text">当前保留聊天与右侧审视栏，适合长时间研究、低负载运行与笔记本办公。</div>
+                </div>
+                <div class="scene-shell-body" id="scene-shell-body">
+                    <!-- 3D 可视化区域 -->
+                    <div class="scene-container" id="scene-container">
+                        <canvas id="team-canvas"></canvas>
+                        <!-- 智能体标签覆盖层 -->
+                        <div id="agent-labels" class="agent-labels"></div>
+                        <!-- 加载提示 -->
+                        <div id="scene-loading" class="scene-loading">
+                            <div class="scene-loading-text">正在加载 3D 场景...</div>
+                        </div>
+                        <div class="scene-zoom-controls" id="scene-zoom-controls" aria-label="3D场景缩放控制">
+                            <button id="scene-zoom-in" class="scene-zoom-btn" type="button" title="放大场景">+</button>
+                            <button id="scene-zoom-out" class="scene-zoom-btn" type="button" title="缩小场景">-</button>
+                            <button id="scene-zoom-reset" class="scene-zoom-btn" type="button" title="重置视角">重置</button>
+                        </div>
+                        <!-- 会议室实时决策浮层 -->
+                        <div id="scene-meeting-panel" class="scene-meeting-panel">
+                            <div class="scene-meeting-head">
+                                <span class="scene-meeting-title">会议室实时决策</span>
+                                <span id="scene-meeting-badge" class="scene-meeting-badge idle">待机</span>
+                            </div>
+                            <div id="scene-meeting-content" class="scene-meeting-content">
+                                <div class="scene-meeting-empty">等待会议触发...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workspace-chat-card" id="workspace-chat-card">
+                <div class="workspace-chat-head">
+                    <div>
+                        <div class="workspace-chat-title">团队主聊天工作台</div>
+                        <div class="workspace-chat-subtitle">在这里直接提问、派发研究任务、观察协作过程与最终答复。</div>
+                    </div>
+                    <div class="workspace-chat-actions">
+                        <button id="btn-toggle-scene" class="btn btn-outline btn-sm" onclick="toggleSceneVisibility()">关闭3D</button>
+                    </div>
+                </div>
+                <div class="ask-shell">
+                    <div class="ask-toolbar">
+                        <div class="ask-title">智能体直连问答</div>
+                        <div class="ask-toolbar-actions">
+                            <div class="ask-hint">多轮聊天、联网检索、团队协作与推理过程都在这一条主线程里查看。</div>
+                            <button class="btn btn-outline btn-sm" onclick="focusAgentDetails()">查看智能体细节</button>
+                        </div>
+                    </div>
+                    <div class="ask-chat-session-bar">
+                        <button class="btn btn-outline btn-sm" onclick="createAskChatSession(true)">+ 新建聊天</button>
+                        <div id="ask-chat-session-list" class="ask-chat-session-list"></div>
+                    </div>
+                    <div id="ask-response" class="ask-response" style="display:block;"></div>
+                    <div class="ask-section ask-section-compact">
+                        <div class="ask-composer-top">
+                            <select id="ask-agent" class="ask-agent-select" onchange="onAskAgentChanged()">
+                                <option value="director">决策总监</option>
+                                <option value="analyst">投资分析师</option>
+                                <option value="risk">风控官</option>
+                                <option value="intel">市场情报员</option>
+                                <option value="quant">量化策略师</option>
+                                <option value="restructuring">资产重组专家</option>
+                                <option value="auditor">反思审计员</option>
+                            </select>
+                            <input type="text" id="ask-input" class="ask-input"
+                                   placeholder="例如：请总结当前团队分工、优先级和风险敞口" onkeydown="if(event.key==='Enter') askAgent()">
+                            <button class="btn btn-primary ask-send-btn" onclick="askAgent()">发送</button>
+                        </div>
+                        <div class="ask-composer-meta">
+                            <div class="ask-mode-row ask-mode-row-compact">
+                                <span class="ask-mode-label">回答模式</span>
+                                <div class="ask-mode-switch" id="ask-mode-switch">
+                                    <button type="button" class="ask-mode-btn active" data-mode="quick" onclick="selectAskMode('quick')">快速</button>
+                                    <button type="button" class="ask-mode-btn" data-mode="deep" onclick="selectAskMode('deep')">深度</button>
+                                    <button type="button" class="ask-mode-btn" data-mode="team" onclick="selectAskMode('team')">团队协作</button>
+                                </div>
+                                <label class="ask-net-toggle" title="关闭后将禁止 web_search 工具">
+                                    <input type="checkbox" id="ask-enable-web" checked onchange="onAskWebToggleChanged()">
+                                    <span>联网搜索</span>
+                                </label>
+                                <button class="btn btn-outline btn-sm" onclick="createAskChatSession(true)">新聊天</button>
+                                <span id="ask-team-time-chip" class="ask-team-time-chip" style="display:none;">团队时限：8分钟</span>
+                                <button id="ask-team-time-btn" class="btn btn-outline btn-sm" style="display:none;" onclick="openAskTimeLimitModal()">设置时限</button>
+                            </div>
+                            <div id="ask-mode-hint" class="ask-mode-hint">快速模式：轻量直答，只有需要核实时才联网。</div>
+                        </div>
+                    </div>
+                    <details class="ask-collapsible" id="ask-advanced-panel" ontoggle="handleAskCollapsibleToggle(this)">
+                        <summary>
+                            <span>高级协作设置</span>
+                            <span class="ask-collapsible-summary-note">仅在需要团队拆解、开会、时限控制时展开</span>
+                        </summary>
+                        <div class="ask-collapsible-body">
+                            <div class="ask-workflow-box">
+                                <div class="ask-workflow-head">
+                                    <span class="ask-workflow-title">团队协作流程（仅团队协作模式生效）</span>
+                                    <span id="ask-workflow-status" class="ask-workflow-status">加载中...</span>
+                                </div>
+                                <div class="ask-workflow-cards">
+                                    <button class="ask-flow-card" data-intent="conditional_meeting" onclick="selectAskWorkflowIntent('conditional_meeting')">
+                                        <div class="ask-flow-name">自动推荐</div>
+                                        <div class="ask-flow-desc">系统按问题复杂度自动分配，出现关键分歧才开会</div>
+                                    </button>
+                                    <button class="ask-flow-card" data-intent="director_only" onclick="selectAskWorkflowIntent('director_only')">
+                                        <div class="ask-flow-name">只回答我（总监）</div>
+                                        <div class="ask-flow-desc">不分配成员，直接由决策总监回答，速度最快</div>
+                                    </button>
+                                    <button class="ask-flow-card" data-intent="team_research" onclick="selectAskWorkflowIntent('team_research')">
+                                        <div class="ask-flow-name">先团队研究再答复</div>
+                                        <div class="ask-flow-desc">先由团队成员协同研究，再由总监统一答复</div>
+                                    </button>
+                                    <button class="ask-flow-card" data-intent="force_meeting" onclick="selectAskWorkflowIntent('force_meeting')">
+                                        <div class="ask-flow-name">先开会再答复</div>
+                                        <div class="ask-flow-desc">团队先讨论会议达成共识，再由总监决策答复</div>
+                                    </button>
+                                </div>
+                                <div class="ask-workflow-foot">
+                                    <div id="ask-workflow-summary" class="ask-workflow-summary">流程说明加载中...</div>
+                                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                        <label for="ask-workflow-time-limit" style="font-size:12px;color:#64748b;">团队协作时限</label>
+                                        <select id="ask-workflow-time-limit" class="pf-select" style="min-width:128px;" onchange="updateAskWorkflowTimeout()">
+                                            <option value="180">3分钟</option>
+                                            <option value="300">5分钟</option>
+                                            <option value="480" selected>8分钟</option>
+                                            <option value="600">10分钟</option>
+                                            <option value="720">12分钟</option>
+                                            <option value="900">15分钟</option>
+                                            <option value="1200">20分钟</option>
+                                        </select>
+                                        <button class="btn btn-outline btn-sm" onclick="loadAskWorkflowConfig(false)">刷新配置</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ask-routing-stack">
+                                <div id="ask-session-hint" class="ask-session-hint">会话上下文：当前聊天会自动继承线程记忆</div>
+                                <div id="ask-routing-hint" class="ask-routing-hint">当前：总监团队模式（将按上方流程执行）</div>
+                            </div>
+                        </div>
+                    </details>
+                    <details class="ask-collapsible ask-context-panel" id="ask-context-panel" ontoggle="handleAskCollapsibleToggle(this)">
+                        <summary>
+                            <span>材料与上下文</span>
+                            <span class="ask-collapsible-summary-note">按需上传 PDF、图片、文档和数据文件</span>
+                        </summary>
+                        <div class="ask-collapsible-body">
+                            <div class="ask-context-row">
+                                <input type="file" id="team-context-files" class="ask-context-input-hidden" multiple
+                                       onchange="onTeamContextFilesChanged()"
+                                       accept=".txt,.md,.markdown,.csv,.tsv,.json,.log,.py,.sql,.yaml,.yml,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.bmp,.gif">
+                                <label for="team-context-files" class="ask-file-trigger">
+                                    <span class="ask-file-trigger-icon">📎</span>
+                                    <span>选择文件</span>
+                                </label>
+                                <button class="btn btn-outline btn-sm" onclick="uploadTeamContextFiles()">上传材料</button>
+                                <button class="btn btn-outline btn-sm" onclick="clearTeamContexts()">清空材料</button>
+                                <span class="ask-context-status" id="team-context-status">未上传上下文</span>
+                            </div>
+                            <div id="ask-context-selected" class="ask-context-selected">未选择文件</div>
+                            <div class="ask-context-list" id="team-context-list"></div>
+                        </div>
+                    </details>
+                    <div id="ask-feedback-box" class="ask-feedback-box" style="display:none;">
+                        <div class="ask-feedback-head">回答质量反馈（会写入团队经验）</div>
+                        <div class="ask-feedback-row">
+                            <label for="ask-feedback-score">评分(0-10)</label>
+                            <input type="number" id="ask-feedback-score" min="0" max="10" step="1" value="8">
+                            <input type="range" id="ask-feedback-score-range" min="0" max="10" step="1" value="8"
+                                   oninput="syncAskFeedbackScore(this.value)">
+                            <button class="btn btn-primary btn-sm" onclick="submitAskFeedback()">提交反馈</button>
+                            <span id="ask-feedback-status" class="ask-feedback-status"></span>
+                        </div>
+                        <textarea id="ask-feedback-suggestion" class="ask-feedback-text"
+                                  placeholder="可选：写下你希望改进的点，例如“结论更明确”“风险提示再量化”"></textarea>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <button id="ask-download-btn" class="btn btn-outline" style="display:none;" onclick="downloadAskResponse()">下载答复</button>
+                    </div>
+                    <div class="team-chat-action-strip">
+                        <button id="btn-toggle-auto" class="btn btn-outline action-kit-btn action-kit-auto" data-desc="按研究周期自动巡检市场与组合" onclick="toggleAuto()">
+                            <span class="action-kit-head">
+                                <span id="btn-toggle-auto-icon" class="action-kit-icon">▶</span>
+                                <span id="btn-toggle-auto-title" class="action-kit-title">启动自动研究</span>
+                            </span>
+                        </button>
+                        <button class="btn btn-outline action-kit-btn action-kit-manual" data-desc="输入主题后触发一次完整协作分析" onclick="showAnalyzeDialog()">
+                            <span class="action-kit-head">
+                                <span class="action-kit-icon">🔍</span>
+                                <span class="action-kit-title">手动触发研究</span>
+                            </span>
+                        </button>
+                        <button class="btn btn-outline action-kit-btn action-kit-learn" data-desc="主动学习新知识并沉淀到团队记忆" onclick="runIdleLearning()">
+                            <span class="action-kit-head">
+                                <span class="action-kit-icon">📚</span>
+                                <span class="action-kit-title">立即学习</span>
+                            </span>
+                        </button>
+                        <button class="btn btn-outline action-kit-btn action-kit-chat" data-desc="模拟团队交流，促进视角碰撞" onclick="runOfficeChat()">
+                            <span class="action-kit-head">
+                                <span class="action-kit-icon">☕</span>
+                                <span class="action-kit-title">立即闲聊</span>
+                            </span>
+                        </button>
+                        <button class="btn btn-outline action-kit-btn action-kit-direct" data-desc="进入智能体直连问答主线程" onclick="toggleAskPanel()">
+                            <span class="action-kit-head">
+                                <span class="action-kit-icon">🗨</span>
+                                <span class="action-kit-title">直连问答</span>
+                            </span>
+                        </button>
+                        <button class="btn btn-outline action-kit-btn action-kit-stop" data-desc="中止当前任务与会议流程" onclick="stopAllTeamWork()">
+                            <span class="action-kit-head">
+                                <span class="action-kit-icon">⛔</span>
+                                <span class="action-kit-title">停止所有工作</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧面板 -->
+        <div class="side-panel">
+            <!-- 面板标签页 -->
+            <div class="panel-tabs">
+                <button class="panel-tab active" data-tab="status" onclick="switchTab('status')">智能体</button>
+                <button class="panel-tab" data-tab="prompts" onclick="switchTab('prompts')">提示词</button>
+                <button class="panel-tab" data-tab="tools-audit" onclick="switchTab('tools-audit')">工具审查</button>
+                <button class="panel-tab" data-tab="activity" onclick="switchTab('activity')">活动日志</button>
+                <button class="panel-tab" data-tab="workflow" onclick="switchTab('workflow')">工作流透视</button>
+                <button class="panel-tab" data-tab="memory" onclick="switchTab('memory')">记忆系统</button>
+                <button class="panel-tab" data-tab="evolution" onclick="switchTab('evolution')">自进化</button>
+                <button class="panel-tab" data-tab="reports" onclick="switchTab('reports')">研究报告</button>
+                <button class="panel-tab" data-tab="portfolio" onclick="switchTab('portfolio')">投资收益</button>
+            </div>
+
+            <!-- 智能体状态 -->
+            <div class="panel-content active" id="tab-status">
+                <div id="agent-status-list" class="agent-status-list">
+                    <!-- 由 JS 动态填充 -->
+                </div>
+                <div class="team-observability">
+                    <div class="obs-card">
+                        <div class="obs-head">
+                            <span class="obs-title">Token预算控制器</span>
+                            <button class="btn btn-outline btn-sm" onclick="refreshTeamObservability()">刷新</button>
+                        </div>
+                        <div id="token-budget-panel" class="obs-body">
+                            <div class="activity-empty">预算状态加载中...</div>
+                        </div>
+                    </div>
+                    <div class="obs-card">
+                        <div class="obs-head">
+                            <span class="obs-title">端到端 Trace</span>
+                            <button class="btn btn-outline btn-sm" onclick="refreshTraceRuns()">刷新</button>
+                        </div>
+                        <div id="trace-run-panel" class="obs-body">
+                            <div class="activity-empty">暂无 Trace 运行记录</div>
+                        </div>
+                        <details class="trace-detail-wrap">
+                            <summary>查看 Trace 详情</summary>
+                            <div class="trace-detail-controls">
+                                <input id="trace-run-id-input" class="ask-input" type="text" placeholder="输入 run_id">
+                                <button class="btn btn-outline btn-sm" onclick="loadTraceDetail()">加载详情</button>
+                            </div>
+                            <pre id="trace-detail-panel" class="trace-detail-panel">请选择上方 run_id 查看 spans 详情</pre>
+                        </details>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统提示词 -->
+            <div class="panel-content" id="tab-prompts">
+                <div class="team-prompt-pane">
+                    <div class="team-prompt-head">
+                        <h3>提示词管理中心</h3>
+                        <p>查看并编辑智能体系统提示词，以及工作流/会议/研究/投资等组件级提示词</p>
+                    </div>
+                    <div class="team-prompt-row">
+                        <label for="team-model-default">团队默认模型</label>
+                        <select id="team-model-default"></select>
+                        <button class="btn btn-outline btn-sm" onclick="saveTeamDefaultModel()">保存</button>
+                    </div>
+                    <div class="team-prompt-row">
+                        <label for="team-model-agent">智能体模型</label>
+                        <select id="team-model-agent" onchange="onTeamModelAgentChanged()">
+                            <option value="director">决策总监</option>
+                            <option value="analyst">投资分析师</option>
+                            <option value="risk">风控官</option>
+                            <option value="intel">市场情报员</option>
+                            <option value="quant">量化策略师</option>
+                            <option value="restructuring">资产重组专家</option>
+                            <option value="auditor">反思审计员</option>
+                        </select>
+                        <select id="team-model-agent-value"></select>
+                        <button class="btn btn-outline btn-sm" onclick="saveTeamAgentModel()">保存</button>
+                        <span id="team-model-status" class="team-prompt-status"></span>
+                    </div>
+                    <div class="team-prompt-row">
+                        <label for="team-prompt-agent">智能体</label>
+                        <select id="team-prompt-agent" onchange="onTeamPromptAgentChanged()"></select>
+                        <span id="team-prompt-status" class="team-prompt-status"></span>
+                    </div>
+                    <div id="team-prompt-desc" class="team-prompt-runtime" style="margin-top:8px;">
+                        这里会显示当前提示词条目的用途说明
+                    </div>
+                    <textarea id="team-prompt-text" class="team-prompt-textarea"
+                              placeholder="提示词加载中..."></textarea>
+                    <div class="team-prompt-actions">
+                        <button class="btn btn-primary btn-sm" onclick="saveTeamPromptConfig()">保存提示词</button>
+                        <button class="btn btn-outline btn-sm" onclick="resetTeamPromptConfig()">恢复默认</button>
+                        <button class="btn btn-outline btn-sm" onclick="loadTeamPromptConfigs()">刷新</button>
+                    </div>
+                    <div id="team-prompt-runtime" class="team-prompt-runtime">
+                        当前未获取到运行时提示词画像
+                    </div>
+                </div>
+            </div>
+
+            <!-- 工具 / Skill 审查中心 -->
+            <div class="panel-content" id="tab-tools-audit">
+                <div class="tool-audit-pane">
+                    <div class="tool-audit-head">
+                        <h3>工具与 Skill 透明中心</h3>
+                        <p>一键展示智能体可用能力，并支持按需风控审查</p>
+                    </div>
+                    <div class="tool-audit-actions">
+                        <button class="btn btn-primary btn-sm" onclick="loadToolAuditCatalog(false)">展示工具与 Skill 清单</button>
+                        <button class="btn btn-outline btn-sm" onclick="runToolAuditReview('all', '')">风控官审查全部</button>
+                        <span id="tool-audit-status" class="tool-audit-status"></span>
+                    </div>
+                    <div id="tool-audit-summary" class="tool-audit-summary">
+                        点击“展示工具与 Skill 清单”后查看
+                    </div>
+                    <div id="tool-audit-list" class="tool-audit-list">
+                        <div class="activity-empty">尚未加载工具与 Skill 清单</div>
+                    </div>
+                    <div class="tool-audit-source-wrap">
+                        <div class="tool-audit-source-head">
+                            <span>底层代码查看</span>
+                        </div>
+                        <pre id="tool-audit-source" class="tool-audit-source">请先在上方列表点击“查看底层代码”</pre>
+                    </div>
+                    <div class="tool-audit-review-wrap">
+                        <div class="tool-audit-review-head">
+                            <span>风控官审查结果</span>
+                        </div>
+                        <div id="tool-audit-review" class="tool-audit-review">请先点击“风控官审查”按钮</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 活动日志 -->
+            <div class="panel-content" id="tab-activity">
+                <div class="activity-toolbar">
+                    <button class="activity-filter-btn active" data-filter="all" onclick="setActivityFilter('all')">全部</button>
+                    <button class="activity-filter-btn" data-filter="auto_research" onclick="setActivityFilter('auto_research')">自动研究</button>
+                    <button class="activity-filter-btn" data-filter="idle_learning" onclick="setActivityFilter('idle_learning')">闲时学习</button>
+                    <button class="activity-filter-btn" data-filter="office_chat" onclick="setActivityFilter('office_chat')">同事闲聊</button>
+                    <button class="activity-filter-btn" data-filter="portfolio_investment" onclick="setActivityFilter('portfolio_investment')">投资执行</button>
+                    <button class="activity-filter-btn" data-filter="market_watch" onclick="setActivityFilter('market_watch')">盘中盯盘</button>
+                    <button class="activity-filter-btn" data-filter="user_ask" onclick="setActivityFilter('user_ask')">直连问答</button>
+                    <button class="activity-filter-btn" data-filter="meeting_result" onclick="setActivityFilter('meeting_result')">会议结果</button>
+                    <button class="activity-filter-btn" data-filter="system" onclick="setActivityFilter('system')">其他</button>
+                </div>
+                <div id="activity-log" class="activity-log">
+                    <div class="activity-empty">等待智能体开始工作...</div>
+                </div>
+            </div>
+
+            <!-- 工作流透视 -->
+            <div class="panel-content" id="tab-workflow">
+                <div class="workflow-toolbar">
+                    <div class="workflow-toolbar-row">
+                        <label for="workflow-session-select">会话:</label>
+                        <select id="workflow-session-select" onchange="onWorkflowSessionChanged()"></select>
+                    </div>
+                    <div class="workflow-toolbar-row">
+                        <button class="btn btn-outline btn-sm" onclick="refreshWorkflowLane()">刷新回放</button>
+                        <button class="btn btn-outline btn-sm" onclick="downloadWorkflowSession()">下载回放</button>
+                    </div>
+                </div>
+                <div id="workflow-summary" class="workflow-summary">
+                    <div class="activity-empty">暂无可回放会话</div>
+                </div>
+                <div id="workflow-lanes" class="workflow-lanes">
+                    <div class="activity-empty">等待活动日志...</div>
+                </div>
+            </div>
+
+            <div class="panel-content" id="tab-memory">
+                <div class="memory-pane">
+                    <div class="memory-head">
+                        <h3>记忆系统</h3>
+                        <p>展示长期记忆、检索召回和上下文注入顺序，帮助观察每个智能体本轮到底带了什么记忆。</p>
+                    </div>
+                    <div class="memory-toolbar">
+                        <button class="btn btn-outline btn-sm" onclick="loadMemoryCenter(true)">刷新</button>
+                    </div>
+                    <div id="memory-architecture" class="memory-architecture">
+                        <div class="activity-empty">记忆架构加载中...</div>
+                    </div>
+                    <div id="memory-agent-list" class="memory-agent-list">
+                        <div class="activity-empty">等待记忆数据...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-content" id="tab-evolution">
+                <div class="memory-pane">
+                    <div class="memory-head">
+                        <h3>自进化</h3>
+                        <p>展示反思日志、模式学习和 HOT 规则晋升，帮助判断智能体是否真的在持续积累经验。</p>
+                    </div>
+                    <div class="memory-toolbar">
+                        <button class="btn btn-outline btn-sm" onclick="loadMemoryCenter(true)">刷新</button>
+                    </div>
+                    <div id="evolution-agent-list" class="memory-agent-list">
+                        <div class="activity-empty">等待进化数据...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 研究报告 -->
+            <div class="panel-content" id="tab-reports">
+                <div id="reports-list" class="reports-list">
+                    <div class="activity-empty">暂无研究报告</div>
+                </div>
+            </div>
+
+            <!-- 投资收益 -->
+            <div class="panel-content" id="tab-portfolio">
+                <!-- 控制栏 -->
+                <div class="pf-control-bar">
+                    <div class="pf-control-row">
+                        <select id="pf-mode" class="pf-select">
+                            <option value="free">自由模式</option>
+                            <option value="target">指定标的</option>
+                        </select>
+                        <input type="text" id="pf-target-code" class="pf-input-sm" placeholder="如 600519.SH" style="display:none;">
+                        <button class="btn btn-primary btn-sm" onclick="portfolioInit()">初始化</button>
+                    </div>
+                    <div class="pf-control-row">
+                        <label class="pf-switch-label">
+                            <input type="checkbox" id="pf-auto-run" onchange="togglePortfolioAuto()">
+                            <span>自动运行</span>
+                        </label>
+                        <label class="pf-switch-label">
+                            <input type="checkbox" id="pf-watch-enabled" onchange="togglePortfolioWatchEnabled()">
+                            <span>盘中盯盘</span>
+                        </label>
+                        <select id="pf-watch-interval" class="pf-select" onchange="updatePortfolioWatchInterval()">
+                            <option value="300">5分钟</option>
+                            <option value="900">15分钟</option>
+                            <option value="1800" selected>30分钟</option>
+                            <option value="3600">60分钟</option>
+                        </select>
+                        <select id="pf-manual-time-limit" class="pf-select">
+                            <option value="3">3分钟时限</option>
+                            <option value="5">5分钟时限</option>
+                            <option value="8">8分钟时限</option>
+                            <option value="10" selected>10分钟时限</option>
+                            <option value="12">12分钟时限</option>
+                            <option value="15">15分钟时限</option>
+                            <option value="20">20分钟时限</option>
+                        </select>
+                        <button class="btn btn-outline btn-sm" onclick="portfolioRunManual()">执行今日分析</button>
+                        <button class="btn btn-outline btn-sm" onclick="portfolioRunWatchNow()">立即盯盘</button>
+                    </div>
+                </div>
+                <div id="pf-runtime-tips" class="pf-runtime-tips">
+                    <div id="pf-db-update-tip" class="pf-runtime-tip">数据库更新状态: --</div>
+                </div>
+
+                <!-- 总览卡片 -->
+                <div class="pf-overview" id="pf-overview">
+                    <div class="pf-card">
+                        <div class="pf-card-label">总资产</div>
+                        <div class="pf-card-value" id="pf-total-assets">--</div>
+                    </div>
+                    <div class="pf-card">
+                        <div class="pf-card-label">现金</div>
+                        <div class="pf-card-value" id="pf-cash">--</div>
+                    </div>
+                    <div class="pf-card">
+                        <div class="pf-card-label">持仓市值</div>
+                        <div class="pf-card-value" id="pf-market-value">--</div>
+                    </div>
+                    <div class="pf-card">
+                        <div class="pf-card-label">净值</div>
+                        <div class="pf-card-value" id="pf-nav">--</div>
+                    </div>
+                    <div class="pf-card">
+                        <div class="pf-card-label">日收益</div>
+                        <div class="pf-card-value" id="pf-daily-return">--</div>
+                    </div>
+                    <div class="pf-card">
+                        <div class="pf-card-label">累计收益</div>
+                        <div class="pf-card-value" id="pf-total-return">--</div>
+                    </div>
+                    <div class="pf-card">
+                        <div class="pf-card-label">最大回撤</div>
+                        <div class="pf-card-value" id="pf-max-drawdown">--</div>
+                    </div>
+                    <div class="pf-card">
+                        <div class="pf-card-label">夏普比率</div>
+                        <div class="pf-card-value" id="pf-sharpe">--</div>
+                    </div>
+                </div>
+
+                <!-- 净值曲线 -->
+                <div class="pf-section">
+                    <div class="pf-section-header">
+                        <span class="pf-section-title">净值曲线</span>
+                        <div class="pf-nav-range">
+                            <button class="pf-range-btn active" data-days="7" onclick="changeNavRange(7)">7日</button>
+                            <button class="pf-range-btn" data-days="30" onclick="changeNavRange(30)">30日</button>
+                            <button class="pf-range-btn" data-days="0" onclick="changeNavRange(0)">全部</button>
+                        </div>
+                    </div>
+                    <div id="pf-nav-chart" class="pf-chart"></div>
+                </div>
+
+                <!-- 持仓明细 -->
+                <div class="pf-section">
+                    <span class="pf-section-title">持仓明细</span>
+                    <div class="pf-table-wrap">
+                        <table class="pf-table" id="pf-positions-table">
+                            <thead>
+                                <tr><th>代码</th><th>名称</th><th>数量</th><th>成本</th><th>现价</th><th>浮盈%</th><th>占比</th></tr>
+                            </thead>
+                            <tbody id="pf-positions-body">
+                                <tr><td colspan="7" class="pf-empty">暂无持仓</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 交易信号 -->
+                <div class="pf-section">
+                    <span class="pf-section-title">交易信号</span>
+                    <div id="pf-signals-list" class="pf-signals-list">
+                        <div class="pf-empty">暂无交易信号</div>
+                    </div>
+                </div>
+
+                <!-- 智能体薪资 -->
+                <div class="pf-section">
+                    <span class="pf-section-title">智能体薪资</span>
+                    <div id="pf-salary-panel" class="pf-salary-panel">
+                        <div class="pf-empty">暂无薪资数据</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 团队协作时限弹窗 -->
+<div id="ask-time-limit-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <h3>团队协作时限</h3>
+        <p style="color:var(--text-secondary);margin-bottom:12px;">
+            该时限会同步到：团队协作问答、手动触发分析、投资收益手动执行。
+        </p>
+        <select id="ask-time-limit-modal-select" class="pf-select" style="min-width:180px;margin-bottom:12px;">
+            <option value="3">3分钟</option>
+            <option value="5">5分钟</option>
+            <option value="8" selected>8分钟</option>
+            <option value="10">10分钟</option>
+            <option value="12">12分钟</option>
+            <option value="15">15分钟</option>
+            <option value="20">20分钟</option>
+        </select>
+        <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="applyAskTimeLimitFromModal()">应用</button>
+            <button class="btn btn-outline" onclick="closeAskTimeLimitModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 手动分析弹窗 -->
+<div id="analyze-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <h3>触发研究分析</h3>
+        <p style="color:var(--text-secondary);margin-bottom:12px;">输入股票代码（如 600519.SH）或研究主题</p>
+        <input type="text" id="analyze-topic" class="ask-input" placeholder="例: 600519.SH 或 半导体行业"
+               style="width:100%;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <label for="analyze-time-limit" style="font-size:13px;color:var(--text-secondary);">任务时限</label>
+            <select id="analyze-time-limit" class="pf-select" style="min-width:140px;">
+                <option value="3">3分钟</option>
+                <option value="5">5分钟</option>
+                <option value="8" selected>8分钟</option>
+                <option value="10">10分钟</option>
+                <option value="12">12分钟</option>
+                <option value="15">15分钟</option>
+                <option value="20">20分钟</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="startAnalyze()">开始分析</button>
+            <button class="btn btn-outline" onclick="closeAnalyzeModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 报告详情弹窗 -->
+<div id="report-modal" class="modal" style="display:none;">
+    <div class="modal-content modal-large">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 id="report-modal-title">研究报告</h3>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-outline" onclick="downloadCurrentReport()">下载报告</button>
+                <button class="btn btn-outline btn-report-delete" onclick="deleteCurrentReport()">删除报告</button>
+                <button class="btn btn-outline" onclick="closeReportModal()">✕ 关闭</button>
+            </div>
+        </div>
+        <div id="report-modal-content" class="report-content"></div>
+    </div>
+</div>
+
+<!-- 活动详情弹窗 -->
+<div id="activity-detail-modal" class="modal" style="display:none;">
+    <div class="modal-content modal-large">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 id="activity-detail-title">活动详情</h3>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button id="activity-jump-workflow-btn" class="btn btn-outline" style="display:none;" onclick="jumpToWorkflowFromActivity()">查看会话泳道</button>
+                <button class="btn btn-outline" onclick="downloadCurrentActivityDetail()">下载内容</button>
+                <button class="btn btn-outline" onclick="closeActivityDetail()">✕ 关闭</button>
+            </div>
+        </div>
+        <div id="activity-detail-content" class="report-content"></div>
+    </div>
+</div>
+
+<!-- 运行时提示词详情弹窗 -->
+<div id="prompt-profile-modal" class="modal" style="display:none;">
+    <div class="modal-content modal-large">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 id="prompt-profile-title">运行时提示词详情</h3>
+            <button class="btn btn-outline" onclick="closePromptProfileModal()">✕ 关闭</button>
+        </div>
+        <div id="prompt-profile-content" class="report-content"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+// Module load error fallback - show error instead of infinite loading
+window.addEventListener('error', function(e) {
+    if (e.filename && e.filename.indexOf('three_scene') !== -1) {
+        var el = document.getElementById('scene-loading');
+        if (el) {
+            var txt = el.querySelector('.scene-loading-text');
+            if (txt) txt.textContent = '3D 场景加载失败（请检查网络连接）';
+            el.style.color = '#ef4444';
+        }
+    }
+});
+</script>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
+<script type="module" src="/team_static/js/three_scene.js?v={{ asset_version }}"></script>
+<script src="/team_static/js/ai_team.js?v={{ asset_version }}"></script>
+{% endblock %}

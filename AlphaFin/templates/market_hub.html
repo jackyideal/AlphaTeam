@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}市场顶底指标{% endblock %}
+
+{% block content %}
+<div class="market-hub-page">
+    <div class="market-hub-hero">
+        <h1>🚀 市场顶底指标</h1>
+        <p>统一查看牛市逃顶指标与铜油比。左侧切换，右侧大屏预览，支持独立窗口打开。</p>
+    </div>
+
+    <div class="market-hub-shell">
+        <div class="market-hub-nav">
+            <button type="button" class="market-hub-nav-item active"
+                    data-key="bull-top"
+                    data-title="牛市逃顶指标"
+                    data-desc="巴菲特指标、股债利差、存款市值比等多指标综合观察。"
+                    data-height="1720"
+                    data-url="https://market.zocdesign.net/bull-top">
+                <span class="market-hub-nav-icon">🚀</span>
+                <span class="market-hub-nav-text">
+                    <strong>牛市逃顶指标</strong>
+                    <small>估值/流动性/情绪综合视角</small>
+                </span>
+            </button>
+
+            <button type="button" class="market-hub-nav-item"
+                    data-key="copper-oil-ratio"
+                    data-title="铜油比"
+                    data-desc="铜与原油价格比值，观察工业景气和通胀预期变化。"
+                    data-height="1080"
+                    data-url="https://market.zocdesign.net/copper-oil-ratio">
+                <span class="market-hub-nav-icon">🛢️</span>
+                <span class="market-hub-nav-text">
+                    <strong>铜油比</strong>
+                    <small>宏观周期与商品相对价格</small>
+                </span>
+            </button>
+        </div>
+
+        <div class="market-hub-preview">
+            <div class="market-hub-preview-head">
+                <div>
+                    <h2 id="market-hub-title">牛市逃顶指标</h2>
+                    <p id="market-hub-desc">巴菲特指标、股债利差、存款市值比等多指标综合观察。</p>
+                </div>
+                <a id="market-hub-open-link" class="btn btn-outline"
+                   href="https://market.zocdesign.net/bull-top"
+                   target="_blank" rel="noopener noreferrer">
+                    独立窗口打开
+                </a>
+            </div>
+            <div class="market-hub-frame-wrap">
+                <iframe id="market-hub-frame"
+                        src="https://market.zocdesign.net/bull-top"
+                        title="市场顶底指标大屏预览"
+                        style="height: 1720px;"
+                        loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            </div>
+            <div class="market-hub-tip">
+                若页面因策略限制无法预览，请点击右上角“独立窗口打开”。
+            </div>
+        </div>
+    </div>
+
+    <div class="market-hub-note">
+        <h2>观察建议</h2>
+        <p>牛市逃顶指标适合做整体仓位风险评估，铜油比适合跟踪经济景气和通胀方向。</p>
+        <p>建议把两者结合市场结构指标一起看，避免单一信号误判。</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    function initMarketHub() {
+        var items = Array.prototype.slice.call(document.querySelectorAll('.market-hub-nav-item'));
+        var titleEl = document.getElementById('market-hub-title');
+        var descEl = document.getElementById('market-hub-desc');
+        var frameEl = document.getElementById('market-hub-frame');
+        var openEl = document.getElementById('market-hub-open-link');
+        if (!items.length || !titleEl || !descEl || !frameEl || !openEl) return;
+
+        function activate(item, syncHash) {
+            items.forEach(function (x) { x.classList.remove('active'); });
+            item.classList.add('active');
+            var title = item.getAttribute('data-title') || '';
+            var desc = item.getAttribute('data-desc') || '';
+            var url = item.getAttribute('data-url') || '';
+            var frameHeight = parseInt(item.getAttribute('data-height') || '0', 10);
+            var key = item.getAttribute('data-key') || '';
+            titleEl.textContent = title;
+            descEl.textContent = desc;
+            openEl.href = url;
+            frameEl.src = url;
+            if (!isNaN(frameHeight) && frameHeight > 0) {
+                frameEl.style.height = String(frameHeight) + 'px';
+            } else {
+                frameEl.style.height = '1320px';
+            }
+            if (syncHash && key) {
+                if (history && history.replaceState) {
+                    history.replaceState(null, '', '#' + key);
+                } else {
+                    window.location.hash = key;
+                }
+            }
+        }
+
+        items.forEach(function (item) {
+            item.addEventListener('click', function () {
+                activate(item, true);
+            });
+        });
+
+        var hashKey = (window.location.hash || '').replace('#', '').trim();
+        var initialized = false;
+        if (hashKey) {
+            var target = items.find(function (item) {
+                return (item.getAttribute('data-key') || '') === hashKey;
+            });
+            if (target) {
+                activate(target, false);
+                initialized = true;
+            }
+        }
+        if (!initialized) {
+            var activeItem = items.find(function (item) {
+                return item.classList.contains('active');
+            }) || items[0];
+            activate(activeItem, false);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMarketHub);
+    } else {
+        initMarketHub();
+    }
+})();
+</script>
+{% endblock %}

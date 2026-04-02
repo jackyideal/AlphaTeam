@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}首页{% endblock %}
+
+{% block content %}
+{% macro fuzzy_plus(n) -%}
+    {%- if n <= 0 -%}
+        0+
+    {%- elif n < 10 -%}
+        10+
+    {%- else -%}
+        {{ ((n + 9) // 10) * 10 }}+
+    {%- endif -%}
+{%- endmacro %}
+<div class="home-v2">
+    <section class="home-v2-hero">
+        <div class="home-v2-hero-glow"></div>
+        <div class="home-v2-hero-glow home-v2-hero-glow-right"></div>
+        <div class="home-v2-brand">
+            <img src="/static/img/logo.svg" alt="AlphaFin" class="home-v2-logo">
+            <h1 class="home-v2-brand-title"><span class="text-red-light">Alpha</span><span class="text-blue-light">Fin</span></h1>
+            <p class="home-v2-credit">李想 Designed · Seeking the ideal Alpha</p>
+            <p class="home-v2-subtitle">
+                <span class="hero-gradient-line">机构级智能投研中枢 · 数据驱动决策引擎 · 交易与风控闭环平台</span>
+            </p>
+            <div class="home-v2-capabilities">
+                <span class="home-v2-capability c-ai">多智能体协同</span>
+                <span class="home-v2-capability c-data">全市场因子体系</span>
+                <span class="home-v2-capability c-risk">风控与审计双保险</span>
+                <span class="home-v2-capability c-trade">执行与复盘闭环</span>
+            </div>
+        </div>
+        <div class="home-v2-metrics">
+            <div class="home-v2-metric-card">
+                <span class="home-v2-metric-value">100+</span>
+                <span class="home-v2-metric-label">量化指标</span>
+            </div>
+            <div class="home-v2-metric-card">
+                <span class="home-v2-metric-value">{{ fuzzy_plus(groups|length) }}</span>
+                <span class="home-v2-metric-label">指标分组</span>
+            </div>
+            <div class="home-v2-metric-card">
+                <span class="home-v2-metric-value">50+</span>
+                <span class="home-v2-metric-label">资金面因子</span>
+            </div>
+            <div class="home-v2-metric-card">
+                <span class="home-v2-metric-value">20+</span>
+                <span class="home-v2-metric-label">策略模型</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-v2-section">
+        <div class="home-v2-section-head center">
+            <h2>核心工作台</h2>
+            <p>按任务类型快速进入对应模块。AlphaTeam 支持手动启动，避免网页打开即占用高内存。</p>
+            <div class="home-v2-domain-ribbon">
+                <a class="home-v2-domain-chip d-strategy" href="#group-strategy">策略模型</a>
+                <a class="home-v2-domain-chip d-structure" href="#group-structure">市场结构指标</a>
+                <a class="home-v2-domain-chip d-macro" href="#group-macro">宏观与估值指标</a>
+                <a class="home-v2-domain-chip d-capital" href="#group-capital">资金面指标</a>
+            </div>
+        </div>
+        <div class="home-v2-module-grid">
+            <a class="home-v2-module-card type-ai" href="/team" onclick="return openTeamEntryGate(event);">
+                <div class="home-v2-module-icon">🧠</div>
+                <h3>AlphaTeam</h3>
+                <p>协同研判 · 风控联动</p>
+            </a>
+            <a class="home-v2-module-card type-ai" href="/ai">
+                <div class="home-v2-module-icon">🤖</div>
+                <h3>AI 智能分析</h3>
+                <p>联网问答 · 结构化输出</p>
+            </a>
+            <a class="home-v2-module-card type-news" href="/sector_news">
+                <div class="home-v2-module-icon">🔥</div>
+                <h3>板块热点分析</h3>
+                <p>热点追踪 · 轮动线索</p>
+            </a>
+            <a class="home-v2-module-card type-stock" href="/stock">
+                <div class="home-v2-module-icon">📈</div>
+                <h3>个股通用分析</h3>
+                <p>估值K线 · 信号校验</p>
+            </a>
+            <a class="home-v2-module-card type-stock" href="/stock_resonance">
+                <div class="home-v2-module-icon">🌐</div>
+                <h3>多周期共振系统</h3>
+                <p>短中长势能 · 周期协同</p>
+            </a>
+            <a class="home-v2-module-card type-strategy" href="/indicator/ind_19_industry_rotation">
+                <div class="home-v2-module-icon">♻️</div>
+                <h3>理想行业轮动策略</h3>
+                <p>动量择时 · 行业评分</p>
+            </a>
+            <a class="home-v2-module-card type-macro" href="/indicator/ind_18_valuation">
+                <div class="home-v2-module-icon">🧮</div>
+                <h3>市场估值指标</h3>
+                <p>估值水位 · 周期锚点</p>
+            </a>
+            <a class="home-v2-module-card type-stock" href="/industry_map">
+                <div class="home-v2-module-icon">🫧</div>
+                <h3>行业时空图谱</h3>
+                <p>同级对照 · 空间定位</p>
+            </a>
+        </div>
+    </section>
+
+    <section class="home-v2-section">
+        <div class="home-v2-section-head center">
+            <h2>指标体系总览</h2>
+            <p>按分组展示核心指标，可直接跳转到指标页面。</p>
+        </div>
+        <div class="home-v2-group-grid">
+            {% for group_name, indicators in groups.items() %}
+            <div class="home-v2-group-card"
+                 {% if group_name == '策略模型' %}id="group-strategy"{% elif group_name == '市场结构指标' %}id="group-structure"{% elif group_name == '宏观与估值指标' %}id="group-macro"{% elif group_name == '资金面指标' %}id="group-capital"{% endif %}>
+                <div class="home-v2-group-head">
+                    <h3>{{ group_name }}</h3>
+                    <span class="home-v2-group-count">{{ indicators|length }}项</span>
+                </div>
+                <ul>
+                    {% for meta in indicators[:6] %}
+                    <li>
+                        <a href="/indicator/{{ meta.id }}">
+                            {{ meta.name }}
+                            {% if meta.slow %}<span class="badge-slow">慢</span>{% endif %}
+                            {% if meta.input_type == 'stock' %}<span class="badge-stock">股</span>{% endif %}
+                            {% if meta.requires_db %}<span class="badge-db">DB</span>{% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if indicators|length > 6 %}
+                <div class="home-v2-group-more">+ {{ indicators|length - 6 }} 项更多指标（见左侧导航）</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="legend">
+            <span><span class="badge-stock">股</span> = 需要输入股票代码</span>
+            <span><span class="badge-slow">慢</span> = 计算较慢</span>
+            <span><span class="badge-db">DB</span> = 需要本地数据库</span>
+        </div>
+    </section>
+</div>
+
+<div id="team-entry-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <h3>启动 AlphaTeam 模块</h3>
+        <p id="team-entry-modal-text" class="team-entry-modal-text">
+            正在检测模块状态...
+        </p>
+        <div class="team-entry-modal-actions">
+            <button id="btn-team-entry-start" class="btn btn-primary" onclick="confirmTeamModuleStartAndEnter()">启动并进入</button>
+            <button class="btn btn-outline" onclick="closeTeamEntryModal()">取消</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

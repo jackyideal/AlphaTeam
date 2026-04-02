@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block title %}板块热点分析{% endblock %}
+
+{% block content %}
+<div class="sector-news-page sector-v3-page" id="sector-news-page">
+    <section class="sector-v3-topbar">
+        <div class="sector-v3-brandline">
+            <span class="sector-v3-brand-mark">🔥</span>
+            <h1>板块热点分析</h1>
+        </div>
+        <div class="sector-v3-flowline" aria-label="运行机制">
+            <span class="sector-v3-flow-item"><span class="sector-v3-flow-icon i-news">⌕</span>聚合新闻</span>
+            <span class="sector-v3-flow-sep">→</span>
+            <span class="sector-v3-flow-item"><span class="sector-v3-flow-icon i-sector">◎</span>识别主线</span>
+            <span class="sector-v3-flow-sep">→</span>
+            <span class="sector-v3-flow-item"><span class="sector-v3-flow-icon i-reason">◌</span>深度推理</span>
+            <span class="sector-v3-flow-sep">→</span>
+            <span class="sector-v3-flow-item"><span class="sector-v3-flow-icon i-report">▣</span>生成报告</span>
+        </div>
+    </section>
+
+    <section class="sector-v3-workbench">
+        <div class="sector-v3-main">
+            <!-- 操作栏 -->
+            <div class="sector-news-controls">
+                <select id="sector-model-select" class="ai-model-select" onchange="persistSectorModelSetting()"></select>
+                <button class="btn btn-primary" id="btn-generate-report" onclick="generateReport()">
+                    📊 生成今日报告
+                </button>
+                <span class="loading-spinner" id="report-loading" style="display: none;">
+                    <span class="spinner"></span> 正在搜索分析中（可能需要 30-60 秒）...
+                </span>
+                <span class="last-update" id="last-update" style="display: none;">
+                    ✅ 上次生成时间: <span id="update-time"></span> <span id="update-meta"></span>
+                </span>
+            </div>
+
+            <div class="sector-context-box">
+                <div class="sector-context-row">
+                    <input type="file" id="sector-context-files" multiple
+                           accept=".txt,.md,.markdown,.csv,.tsv,.json,.log,.py,.sql,.yaml,.yml,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.bmp,.gif">
+                    <button class="btn btn-outline btn-sm" onclick="uploadSectorContextFiles()">添加上下文材料</button>
+                    <button class="btn btn-outline btn-sm" onclick="clearSectorContexts()">清空材料</button>
+                    <span class="sector-context-status" id="sector-context-status">未上传上下文</span>
+                </div>
+                <div class="sector-context-list" id="sector-context-list"></div>
+            </div>
+
+            <!-- 报告展示区 -->
+            <div class="sector-report-container">
+                <div id="report-content" class="sector-report">
+                    <div class="report-placeholder">
+                        <p>👆 点击上方"生成今日报告"按钮，AI 将搜索最新新闻并进行板块热点分析</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <aside class="sector-v3-rail">
+            <section class="prompt-editor-card prompt-editor-card-sector">
+                <div class="prompt-editor-head">
+                    <h3>系统提示词管理</h3>
+                    <p>可查看并修改“板块热点分析”生成报告时使用的系统提示词。</p>
+                </div>
+                <div class="prompt-editor-row">
+                    <label for="sector-prompt-select">提示词对象</label>
+                    <select id="sector-prompt-select" onchange="onSectorPromptSelectionChanged()"></select>
+                    <span id="sector-prompt-status" class="prompt-editor-status"></span>
+                </div>
+                <textarea id="sector-prompt-text" class="prompt-editor-textarea"
+                          placeholder="系统提示词加载中..."></textarea>
+                <div class="prompt-editor-actions">
+                    <button class="btn btn-primary btn-sm" onclick="saveSectorPromptConfig()">保存提示词</button>
+                    <button class="btn btn-outline btn-sm" onclick="resetSectorPromptConfig()">恢复默认</button>
+                    <button class="btn btn-outline btn-sm" onclick="loadSectorPromptConfigs()">刷新</button>
+                </div>
+            </section>
+        </aside>
+    </section>
+</div>
+
+<!-- 引入 marked.js 用于 Markdown 渲染 -->
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/+esm"></script>
+
+<script>
+    var sectorPromptConfigs = [];
+    var sectorModelOptions = [];
+    var sectorContextIds = [];
+    var sectorContextFiles = [];
+    var SECTOR_MODEL_STORAGE_KEY = 'alphafin_sector_model_v1';
+
+    // 页面加载时检查缓存
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSectorPromptConfigs(true);
+        loadSectorModelOptions(true);
+        renderSectorContextList();
+        var cached = localStorage.getItem('sector_report_cache');
+        if (cached) {
+            var data = JSON.parse(cached);
+            displayReport(data);
+        }
+    });
+
+    function setSectorPromptStatus(text, level) {
+        var el = document.getElementById('sector-prompt-status');
+        if (!el) return;
+        el.textContent = text || '';
+        el.classList.remove('ok', 'error', 'loading');
+        if (level === 'ok') el.classList.add('ok');
+        else if (level === 'error') el.classList.add('error');
+        else if (level === 'loading') el.classList.add('loading');
+    }
+
+    function setSectorContextStatus(text, level) {
+        var el = document.getElementById('sector-context-status');
+        if (!el) return;
+        el.textContent = String(text || '');
+        el.classList.remove('ok', 'error', 'loading');
+        if (level === 'ok') el.classList.add('ok');
+        else if (level === 'error') el.classList.add('error');
+        else if (level === 'loading') el.classList.add('loading');
+    }
+
+    function renderSectorModelSelect(options, currentModel) {
+        var sel = document.getElementById('sector-model-select');
+        if (!sel) return;
+        var rows = Array.isArray(options) ? options : [];
+        sectorModelOptions = rows.slice();
+        if (!rows.length) {
+            rows = ['qwen3-max', 'Moonshot-Kimi-K2-Instruct', 'deepseek-r1', 'MiniMax-M2.1'];
+        }
+        var old = String(sel.value || '');
+        sel.innerHTML = rows.map(function(model) {
+            var m = String(model || '').trim();
+            return '<option value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</option>';
+        }).join('');
+        var target = '';
+        try {
+            target = String(localStorage.getItem(SECTOR_MODEL_STORAGE_KEY) || '').trim();
+        } catch (e) {}
+        if (target && rows.indexOf(target) < 0) target = '';
+        if (!target) target = String(currentModel || '').trim();
+        if (!target && old && rows.indexOf(old) >= 0) target = old;
+        if (!target) target = rows[0];
+        sel.value = target;
+    }
+
+    function loadSectorModelOptions(silent) {
+        var sel = document.getElementById('sector-model-select');
+        if (!sel) return;
+        if (!silent) {
+            sel.innerHTML = '<option value="">模型加载中...</option>';
+        }
+        fetch('/api/sector_news/models', {cache: 'no-store'})
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                renderSectorModelSelect(data.allowed_models || [], data.current_model || '');
+            })
+            .catch(function() {
+                renderSectorModelSelect([], 'qwen3-max');
+            });
+    }
+
+    function getSectorSelectedModel() {
+        var sel = document.getElementById('sector-model-select');
+        return sel ? String(sel.value || '').trim() : '';
+    }
+
+    function persistSectorModelSetting() {
+        var modelName = getSectorSelectedModel();
+        if (!modelName) return;
+        try {
+            localStorage.setItem(SECTOR_MODEL_STORAGE_KEY, modelName);
+        } catch (e) {}
+        fetch('/api/sector_news/model', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({model: modelName})
+        }).catch(function() {});
+    }
+
+    function renderSectorContextList() {
+        var box = document.getElementById('sector-context-list');
+        if (!box) return;
+        if (!sectorContextFiles.length) {
+            box.innerHTML = '';
+            setSectorContextStatus('未上传上下文', '');
+            return;
+        }
+        box.innerHTML = sectorContextFiles.map(function(item) {
+            var name = escapeHtml(String(item.name || '未命名文件'));
+            var kind = escapeHtml(String(item.type || 'document'));
+            var pv = escapeHtml(String(item.preview || ''));
+            return '<div class="sector-context-chip">' +
+                '<div class="title">[' + kind + '] ' + name + '</div>' +
+                '<div class="preview">' + pv + '</div>' +
+                '</div>';
+        }).join('');
+        setSectorContextStatus('已加载 ' + sectorContextFiles.length + ' 个材料文件', 'ok');
+    }
+
+    function clearSectorContexts() {
+        sectorContextIds = [];
+        sectorContextFiles = [];
+        var inp = document.getElementById('sector-context-files');
+        if (inp) inp.value = '';
+        renderSectorContextList();
+    }
+
+    function uploadSectorContextFiles() {
+        var inp = document.getElementById('sector-context-files');
+        if (!inp || !inp.files || !inp.files.length) {
+            setSectorContextStatus('请先选择文件', 'error');
+            return;
+        }
+        var fd = new FormData();
+        fd.append('module', 'sector_news');
+        for (var i = 0; i < inp.files.length; i++) {
+            fd.append('files', inp.files[i]);
+        }
+
+        setSectorContextStatus('上传与解析中...', 'loading');
+        fetch('/api/context/upload', {
+            method: 'POST',
+            body: fd
+        })
+        .then(function(res) {
+            return res.text().then(function(text) {
+                var data = null;
+                try {
+                    data = text ? JSON.parse(text) : {};
+                } catch (e) {
+                    if (res.status === 404) {
+                        throw new Error('上传接口未加载（HTTP 404），请重启 AlphaFin 服务');
+                    }
+                    throw new Error('服务返回非 JSON（HTTP ' + res.status + '）');
+                }
+                if (!res.ok || (data && data.ok === false)) {
+                    var msg = (data && (data.error || data.message)) || ('HTTP ' + res.status);
+                    throw new Error(msg);
+                }
+                return data || {};
+            });
+        })
+        .then(function(data) {
+            if (data.context_id) sectorContextIds.push(String(data.context_id));
+            var rows = Array.isArray(data.files) ? data.files : [];
+            for (var i = 0; i < rows.length; i++) sectorContextFiles.push(rows[i]);
+            renderSectorContextList();
+            if (Array.isArray(data.warnings) && data.warnings.length) {
+                setSectorContextStatus('已上传，部分文件有提示：' + data.warnings[0], 'error');
+            }
+            inp.value = '';
+        })
+        .catch(function(err) {
+            setSectorContextStatus('上传失败: ' + String((err && err.message) || err || ''), 'error');
+        });
+    }
+
+    function loadSectorPromptConfigs(silent) {
+        if (!silent) setSectorPromptStatus('正在加载...', 'loading');
+        fetch('/api/sector_news/prompts', {cache: 'no-store'})
+            .then(function(res) {
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        throw new Error('HTTP 404（接口未加载，请重启 AlphaFin 服务）');
+                    }
+                    throw new Error('HTTP ' + res.status);
+                }
+                return res.json();
+            })
+            .then(function(data) {
+                sectorPromptConfigs = Array.isArray(data.prompts) ? data.prompts : [];
+                renderSectorPromptSelect();
+                onSectorPromptSelectionChanged();
+                setSectorPromptStatus('已加载', 'ok');
+            })
+            .catch(function(err) {
+                setSectorPromptStatus('加载失败: ' + String((err && err.message) || err || ''), 'error');
+            });
+    }
+
+    function renderSectorPromptSelect() {
+        var sel = document.getElementById('sector-prompt-select');
+        if (!sel) return;
+        if (!sectorPromptConfigs.length) {
+            sel.innerHTML = '<option value="">暂无可配置项</option>';
+            return;
+        }
+        var prev = sel.value;
+        sel.innerHTML = sectorPromptConfigs.map(function(item) {
+            var desc = item.description ? (' - ' + item.description) : '';
+            var flag = item.is_overridden ? '（已覆盖）' : '';
+            return '<option value="' + escapeHtml(String(item.key || '')) + '">' +
+                escapeHtml(String(item.name || item.key || '')) + flag + desc + '</option>';
+        }).join('');
+        if (prev) sel.value = prev;
+        if (!sel.value && sectorPromptConfigs[0]) sel.value = sectorPromptConfigs[0].key;
+    }
+
+    function getCurrentSectorPromptItem() {
+        var sel = document.getElementById('sector-prompt-select');
+        var key = sel ? sel.value : '';
+        for (var i = 0; i < sectorPromptConfigs.length; i++) {
+            if (String(sectorPromptConfigs[i].key) === String(key)) return sectorPromptConfigs[i];
+        }
+        return null;
+    }
+
+    function onSectorPromptSelectionChanged() {
+        var textArea = document.getElementById('sector-prompt-text');
+        var item = getCurrentSectorPromptItem();
+        if (!textArea) return;
+        if (!item) {
+            textArea.value = '';
+            return;
+        }
+        textArea.value = String(item.prompt || '');
+    }
+
+    function saveSectorPromptConfig() {
+        var item = getCurrentSectorPromptItem();
+        var textArea = document.getElementById('sector-prompt-text');
+        if (!item || !textArea) return;
+
+        var promptText = String(textArea.value || '').trim();
+        if (!promptText) {
+            setSectorPromptStatus('提示词不能为空', 'error');
+            return;
+        }
+
+        setSectorPromptStatus('保存中...', 'loading');
+        fetch('/api/sector_news/prompts/' + encodeURIComponent(item.key), {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({prompt: promptText})
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.error) throw new Error(data.error);
+            sectorPromptConfigs = Array.isArray(data.prompts) ? data.prompts : sectorPromptConfigs;
+            renderSectorPromptSelect();
+            onSectorPromptSelectionChanged();
+            setSectorPromptStatus('保存成功，下一次生成报告生效', 'ok');
+        })
+        .catch(function(err) {
+            setSectorPromptStatus('保存失败: ' + String((err && err.message) || err || ''), 'error');
+        });
+    }
+
+    function resetSectorPromptConfig() {
+        var item = getCurrentSectorPromptItem();
+        if (!item) return;
+        setSectorPromptStatus('恢复默认中...', 'loading');
+        fetch('/api/sector_news/prompts/' + encodeURIComponent(item.key) + '/reset', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.error) throw new Error(data.error);
+            sectorPromptConfigs = Array.isArray(data.prompts) ? data.prompts : sectorPromptConfigs;
+            renderSectorPromptSelect();
+            onSectorPromptSelectionChanged();
+            setSectorPromptStatus('已恢复默认提示词', 'ok');
+        })
+        .catch(function(err) {
+            setSectorPromptStatus('恢复失败: ' + String((err && err.message) || err || ''), 'error');
+        });
+    }
+
+    function generateReport() {
+        var btn = document.getElementById('btn-generate-report');
+        var loading = document.getElementById('report-loading');
+        var lastUpdate = document.getElementById('last-update');
+
+        // 禁用按钮，显示加载
+        btn.disabled = true;
+        loading.style.display = 'inline-block';
+        lastUpdate.style.display = 'none';
+        if (sectorContextIds.length) {
+            setSectorContextStatus('生成报告中，将使用已上传材料...', 'loading');
+        }
+
+        fetch('/api/sector_news', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                model: getSectorSelectedModel(),
+                context_ids: sectorContextIds
+            })
+        })
+        .then(function(res) {
+            return res.json();
+        })
+        .then(function(data) {
+            btn.disabled = false;
+            loading.style.display = 'none';
+
+            if (data.status === 'success') {
+                displayReport(data);
+                // 缓存到本地存储
+                localStorage.setItem('sector_report_cache', JSON.stringify(data));
+                if (data.context_file_count) {
+                    setSectorContextStatus('本次报告已引用 ' + data.context_file_count + ' 份材料', 'ok');
+                }
+            } else {
+                document.getElementById('report-content').innerHTML =
+                    '<div class="report-error">❌ 报告生成失败: ' + (data.report || '未知错误') + '</div>';
+            }
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            loading.style.display = 'none';
+            document.getElementById('report-content').innerHTML =
+                '<div class="report-error">❌ 请求失败: ' + err.message + '</div>';
+            setSectorContextStatus('请求失败: ' + String((err && err.message) || err || ''), 'error');
+        });
+    }
+
+    function displayReport(data) {
+        var content = document.getElementById('report-content');
+        var lastUpdate = document.getElementById('last-update');
+        var updateTime = document.getElementById('update-time');
+        var updateMeta = document.getElementById('update-meta');
+
+        // 使用 marked 将 Markdown 转换为 HTML
+        try {
+            var html = marked.parse(data.report);
+            content.innerHTML = html;
+        } catch (e) {
+            // 如果 marked 失败，直接显示文本，按 markdown 规则进行基本格式化
+            content.innerHTML = '<pre>' + escapeHtml(data.report) + '</pre>';
+        }
+
+        // 显示生成时间
+        if (data.timestamp) {
+            updateTime.textContent = data.timestamp;
+            if (updateMeta) {
+                var cnt = Number(data.search_items_count || 0);
+                var err = String(data.search_error || '');
+                var model = String(data.model || '');
+                if (err) {
+                    updateMeta.textContent = '（联网检索异常：' + err + (model ? ('，模型: ' + model) : '') + '）';
+                } else {
+                    updateMeta.textContent = '（联网来源 ' + cnt + ' 条' + (model ? ('，模型: ' + model) : '') + '）';
+                }
+            }
+            lastUpdate.style.display = 'inline-block';
+        }
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

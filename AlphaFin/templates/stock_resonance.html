@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}多周期共振系统{% endblock %}
+
+{% block content %}
+<div class="stock-page resonance-page">
+    <div class="stock-header resonance-header">
+        <h1>🌐 多周期共振系统</h1>
+        <p class="indicator-desc">同一标的下，联动观察 5分钟/15分钟/30分钟/60分钟/日线/周线/月线 的 MACD 与 KDJ 当前状态及未来交叉节奏。</p>
+    </div>
+
+    <div class="input-card resonance-input-card">
+        <div class="input-section">
+            <div class="input-group">
+                <label for="res-asset-type">资产类型</label>
+                <select id="res-asset-type">
+                    <option value="stock" selected>股票</option>
+                    <option value="index">指数</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="res-ts-code">代码</label>
+                <input type="text" id="res-ts-code" value="600425.SH" placeholder="如 600425.SH 或 000001.SH">
+            </div>
+            <div class="input-group">
+                <label for="res-start-date">日线起始日期</label>
+                <input type="date" id="res-start-date" value="2020-01-01" min="2010-01-01" max="2026-12-31">
+            </div>
+            <button id="res-query-btn" class="btn btn-primary" onclick="queryResonance()">
+                生成共振分析
+            </button>
+        </div>
+        <div class="resonance-assumption" id="res-assumption">
+            预测假设：未来价格维持当前收盘价不变，仅用于观察指标演化路径，不构成投资建议。
+        </div>
+    </div>
+
+    <div class="resonance-state state-idle" id="res-state">状态：待查询</div>
+    <div class="resonance-warning warning-idle" id="res-warning-box">
+        <div class="light"></div>
+        <div class="content">
+            <h3>共振预警灯</h3>
+            <p>等待计算后自动给出“可关注 / 需警惕 / 观望”的结构提示。</p>
+        </div>
+    </div>
+
+    <div class="resonance-summary-grid" id="res-summary-grid">
+        <div class="resonance-summary-card">
+            <h3>短周期共振</h3>
+            <p>等待计算...</p>
+        </div>
+    </div>
+
+    <section class="resonance-kline-wrap">
+        <div class="resonance-panel-head">
+            <h2>当前标的日线K线</h2>
+            <span id="res-kline-meta">用于观察当前结构位置</span>
+        </div>
+        <div id="res-kline-chart" class="stock-chart-container resonance-kline-chart"></div>
+    </section>
+
+    <section class="resonance-panel">
+        <div class="resonance-panel-head">
+            <h2>多周期指标图墙（左MACD / 右KDJ）</h2>
+            <span>每个周期都绘制此时此刻指标曲线</span>
+        </div>
+        <div class="res-wall-toolbar">
+            <button id="res-wall-mode-short" class="btn btn-sm btn-primary" onclick="setWallMode('short')">短周期分钟（默认）</button>
+            <button id="res-wall-mode-long" class="btn btn-sm btn-outline" onclick="setWallMode('long')">长周期（日/周/月）</button>
+            <button id="res-wall-mode-all" class="btn btn-sm btn-outline" onclick="setWallMode('all')">全部周期（含日/周/月）</button>
+            <span id="res-wall-meta">当前显示：5m/15m/30m/60m</span>
+        </div>
+        <div class="resonance-indicator-wall" id="res-indicator-wall">
+            <div class="res-empty-cell">等待生成指标图...</div>
+        </div>
+    </section>
+
+    <div class="resonance-two-col">
+        <section class="resonance-panel">
+            <div class="resonance-panel-head">
+                <h2>MACD 多周期状态</h2>
+                <span>左侧聚焦 DIF / DEA / 柱值 与未来交叉天数</span>
+            </div>
+            <div class="resonance-table-wrap">
+                <table class="resonance-table">
+                    <thead>
+                        <tr>
+                            <th>周期</th>
+                            <th>当前值</th>
+                            <th>状态</th>
+                            <th>最近事件</th>
+                            <th>距金叉</th>
+                            <th>距死叉</th>
+                            <th>样本</th>
+                        </tr>
+                    </thead>
+                    <tbody id="res-macd-body">
+                        <tr><td colspan="7" class="res-empty-cell">等待生成...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="resonance-panel">
+            <div class="resonance-panel-head">
+                <h2>KDJ 多周期状态</h2>
+                <span>右侧聚焦 K / D / J 与未来交叉天数</span>
+            </div>
+            <div class="resonance-table-wrap">
+                <table class="resonance-table">
+                    <thead>
+                        <tr>
+                            <th>周期</th>
+                            <th>当前值</th>
+                            <th>状态</th>
+                            <th>最近事件</th>
+                            <th>距金叉</th>
+                            <th>距死叉</th>
+                            <th>样本</th>
+                        </tr>
+                    </thead>
+                    <tbody id="res-kdj-body">
+                        <tr><td colspan="7" class="res-empty-cell">等待生成...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="resonance-two-col">
+        <section class="resonance-panel">
+            <div class="resonance-panel-head">
+                <h2>MACD 未来交叉时间轴</h2>
+                <span>横轴=预计天数（基于静态价格假设）</span>
+            </div>
+            <div id="res-macd-timeline" class="resonance-timeline-chart"></div>
+        </section>
+        <section class="resonance-panel">
+            <div class="resonance-panel-head">
+                <h2>KDJ 未来交叉时间轴</h2>
+                <span>可快速识别短多长空/短空长多</span>
+            </div>
+            <div id="res-kdj-timeline" class="resonance-timeline-chart"></div>
+        </section>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/static/js/stock_resonance.js?v={{ asset_version }}"></script>
+{% endblock %}

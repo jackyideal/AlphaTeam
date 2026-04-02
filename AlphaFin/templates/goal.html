@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Ideal 目标{% endblock %}
+
+{% block content %}
+<style>
+.goal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.goal-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px;
+}
+.goal-card-label {
+    color: #6b7280;
+    font-size: 13px;
+}
+.goal-card-value {
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+.goal-section {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+.goal-section-title {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.goal-table-wrap {
+    overflow: auto;
+}
+.goal-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+.goal-table th,
+.goal-table td {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: right;
+    white-space: nowrap;
+}
+.goal-table th:first-child,
+.goal-table td:first-child {
+    text-align: left;
+}
+.goal-form {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+.goal-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+}
+.goal-form-item label {
+    display: block;
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.goal-form-item input {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+}
+.goal-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+</style>
+<div class="indicator-page">
+    <div class="indicator-header">
+        <h1>🎯 Ideal 目标</h1>
+        <p class="indicator-desc">个人资产目标跟踪页面（仅个人查看，不参与 AI 团队工具调用）</p>
+        <div class="info-box">单位沿用原始 notebook 口径（通常为“万元”）</div>
+    </div>
+
+    <form class="goal-form" method="get" action="/goal">
+        <div class="goal-form-grid">
+            <div class="goal-form-item">
+                <label for="current_price">当前测算股价</label>
+                <input id="current_price" name="current_price" type="number" step="0.01" min="0.01" value="{{ goal.current_price }}">
+            </div>
+            <div class="goal-form-item">
+                <label for="total_shares">总持股</label>
+                <input id="total_shares" name="total_shares" type="number" step="0.1" min="0.1" value="{{ goal.total_shares }}">
+            </div>
+            <div class="goal-form-item">
+                <label for="total_debt">总负债</label>
+                <input id="total_debt" name="total_debt" type="number" step="0.1" min="0" value="{{ goal.total_debt }}">
+            </div>
+            <div class="goal-form-item">
+                <label for="fixed_assets">固定资产</label>
+                <input id="fixed_assets" name="fixed_assets" type="number" step="0.1" min="0" value="{{ goal.fixed_assets }}">
+            </div>
+        </div>
+        <div class="goal-form-actions">
+            <button type="submit" class="btn btn-primary">应用参数</button>
+            <a href="/goal" class="btn btn-outline">恢复默认</a>
+        </div>
+    </form>
+
+    <div class="goal-grid">
+        <div class="goal-card">
+            <div class="goal-card-label">总持股</div>
+            <div class="goal-card-value">{{ goal.total_shares }}</div>
+        </div>
+        <div class="goal-card">
+            <div class="goal-card-label">固定资产</div>
+            <div class="goal-card-value">{{ goal.fixed_assets }}</div>
+        </div>
+        <div class="goal-card">
+            <div class="goal-card-label">总负债</div>
+            <div class="goal-card-value">{{ goal.total_debt }}</div>
+        </div>
+        <div class="goal-card">
+            <div class="goal-card-label">目标支出</div>
+            <div class="goal-card-value">{{ goal.purchase_target }}</div>
+        </div>
+        <div class="goal-card">
+            <div class="goal-card-label">当前测算股价</div>
+            <div class="goal-card-value">{{ goal.current_price }}</div>
+        </div>
+        <div class="goal-card">
+            <div class="goal-card-label">净资产-目标支出</div>
+            <div class="goal-card-value" style="color:{% if goal.current_row.target_gap >= 0 %}#dc2626{% else %}#16a34a{% endif %};">
+                {{ goal.current_row.target_gap }}
+            </div>
+        </div>
+    </div>
+
+    <div class="goal-section">
+        <span class="goal-section-title">当前测算（股价 {{ goal.current_row.price }}）</span>
+        <div class="goal-table-wrap">
+            <table class="goal-table">
+                <thead>
+                    <tr>
+                        <th>股票资产</th>
+                        <th>总资产</th>
+                        <th>总负债</th>
+                        <th>净资产</th>
+                        <th>净资产-目标支出</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ goal.current_row.stock_assets }}</td>
+                        <td>{{ goal.current_row.total_assets }}</td>
+                        <td>{{ goal.current_row.total_debt }}</td>
+                        <td>{{ goal.current_row.net_assets }}</td>
+                        <td style="color:{% if goal.current_row.target_gap >= 0 %}#dc2626{% else %}#16a34a{% endif %};font-weight:700;">
+                            {{ goal.current_row.target_gap }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="goal-section">
+        <span class="goal-section-title">股价情景表</span>
+        <div class="goal-table-wrap">
+            <table class="goal-table">
+                <thead>
+                    <tr>
+                        <th>青松股价</th>
+                        <th>股票资产</th>
+                        <th>总资产</th>
+                        <th>总负债</th>
+                        <th>净资产</th>
+                        <th>净资产-目标支出</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in goal.rows %}
+                    <tr>
+                        <td>{{ row.price }}</td>
+                        <td>{{ row.stock_assets }}</td>
+                        <td>{{ row.total_assets }}</td>
+                        <td>{{ row.total_debt }}</td>
+                        <td>{{ row.net_assets }}</td>
+                        <td style="color:{% if row.target_gap >= 0 %}#dc2626{% else %}#16a34a{% endif %};font-weight:700;">
+                            {{ row.target_gap }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

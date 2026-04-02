@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaFin - {% block title %}股票市场指标系统{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ asset_version }}">
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <a href="/" class="logo">
+                <img src="/static/img/logo.svg" alt="AlphaFin" class="logo-icon">
+                <span class="logo-text">Alpha<span class="logo-highlight">Fin</span></span>
+            </a>
+            <span class="header-divider"></span>
+            <span class="subtitle">多因子量化分析 · AI驱动决策引擎</span>
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
+            <span class="header-clock" id="header-clock"></span>
+            <span class="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">系统运行中</span>
+            </span>
+            <button id="btn-update-db" class="btn btn-outline" onclick="updateDatabase()">
+                更新数据库
+            </button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-group" data-group-id="ai-tools">
+                <button type="button" class="group-title group-toggle" aria-expanded="true">
+                    <span>AI 工具</span>
+                    <span class="group-chevron">▾</span>
+                </button>
+                <div class="group-content">
+                    <a href="/ai" class="sidebar-item sidebar-item-ai {% if request.path == '/ai' %}active{% endif %}"
+                       title="AI 智能分析助手（支持联网搜索）">
+                        🤖 AI 智能分析
+                    </a>
+                    <a href="/post_review" class="sidebar-item sidebar-item-ai {% if request.path == '/post_review' %}active{% endif %}"
+                       title="盘后多维复盘（市场/板块/资金/指标体系）">
+                        🧾 盘后复盘
+                    </a>
+                    <a href="/sector_news" class="sidebar-item sidebar-item-ai {% if request.path == '/sector_news' %}active{% endif %}"
+                       title="每日新闻提取与板块热点分析">
+                        🔥 板块热点分析
+                    </a>
+                    <a href="/team" class="sidebar-item sidebar-item-ai {% if request.path == '/team' %}active{% endif %}"
+                       title="6位AI智能体组成的自主研究分析团队">
+                        🧠 AlphaTeam
+                    </a>
+                </div>
+            </div>
+            <div class="sidebar-group" data-group-id="stock-tools">
+                <button type="button" class="group-title group-toggle" aria-expanded="true">
+                    <span>个股工具</span>
+                    <span class="group-chevron">▾</span>
+                </button>
+                <div class="group-content">
+                    <a href="/stock" class="sidebar-item {% if request.path == '/stock' %}active{% endif %}"
+                       title="多因子回测、基本面分析、成本压力分析">
+                        📈 个股通用分析
+                    </a>
+                    <a href="/stock_pattern" class="sidebar-item {% if request.path == '/stock_pattern' %}active{% endif %}"
+                       title="历史结构相似度匹配 + 未来区间统计预测">
+                        🧩 K线匹配预测
+                    </a>
+                    <a href="/stock_resonance" class="sidebar-item {% if request.path == '/stock_resonance' %}active{% endif %}"
+                       title="多周期 MACD/KDJ 共振跟踪（含未来金叉/死叉预测）">
+                        🌐 多周期共振系统
+                    </a>
+                    <a href="/stock_ml" class="sidebar-item {% if request.path == '/stock_ml' %}active{% endif %}"
+                       title="多模型集成：预测下一交易日上涨/下跌概率">
+                        🧪 ML 涨跌预测
+                    </a>
+                    <a href="/industry_map" class="sidebar-item {% if request.path == '/industry_map' %}active{% endif %}"
+                       title="申万行业同级时空对比 + 青松建化定位">
+                        🫧 行业时空图谱
+                    </a>
+                </div>
+            </div>
+            <div class="sidebar-group" data-group-id="personal-tools">
+                <button type="button" class="group-title group-toggle" aria-expanded="true">
+                    <span>个人模块</span>
+                    <span class="group-chevron">▾</span>
+                </button>
+                <div class="group-content">
+                    <a href="/goal" class="sidebar-item {% if request.path == '/goal' %}active{% endif %}"
+                       title="个人资产目标测算页面（不参与AI技能调用）">
+                        🎯 Ideal 目标
+                    </a>
+                </div>
+            </div>
+            {% for group_name, indicators in groups.items() %}
+            <div class="sidebar-group" data-group-id="indicator-{{ group_name|replace(' ', '-') }}">
+                <button type="button" class="group-title group-toggle" aria-expanded="true">
+                    <span>{{ group_name }}</span>
+                    <span class="group-chevron">▾</span>
+                </button>
+                <div class="group-content">
+                    {% if group_name == '市场结构指标' %}
+                    <a href="/market_hub" class="sidebar-item {% if request.path == '/market_hub' %}active{% endif %}"
+                       title="市场顶底指标与铜油比综合观察页面">
+                        🚀 市场顶底指标
+                    </a>
+                    {% endif %}
+                    {% for meta in indicators %}
+                    <a href="/indicator/{{ meta.id }}"
+                       class="sidebar-item {% if indicator_id is defined and indicator_id == meta.id %}active{% endif %}"
+                       title="{{ meta.description }}">
+                        {% if meta.slow %}<span class="badge-slow">慢</span>{% endif %}
+                        {% if meta.input_type == 'stock' %}<span class="badge-stock">股</span>{% endif %}
+                        {{ meta.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </aside>
+        <div class="sidebar-resizer" id="sidebar-resizer"></div>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- 数据库更新弹窗 -->
+    <div id="update-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>数据库更新</h3>
+            <div id="update-options" style="margin-bottom:12px;">
+                <label style="display:block;margin:6px 0;cursor:pointer;">
+                    <input type="checkbox" id="update-fina" value="1"> 同时更新财务指标（fina_indicator，全量更新较慢）
+                </label>
+            </div>
+            <button id="update-start-btn" class="btn btn-primary" onclick="startUpdate()" style="margin-bottom:12px;">开始更新</button>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="update-progress-bar" style="width:0%"></div>
+            </div>
+            <p id="update-message"></p>
+            <button id="update-close-btn" class="btn" onclick="closeUpdateModal()" style="display:none;">关闭</button>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js?v={{ asset_version }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

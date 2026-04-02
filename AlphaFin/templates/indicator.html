@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}{{ meta.name }}{% endblock %}
+
+{% block content %}
+<div class="indicator-page{% if indicator_id == 'ind_27_logicfin' %} logicfin-page{% endif %}">
+    <!-- 标题区 -->
+    <div class="indicator-header{% if indicator_id == 'ind_27_logicfin' %} logicfin-header{% endif %}">
+        <h1>{{ meta.name }}</h1>
+        <p class="indicator-desc">{{ meta.description }}</p>
+        {% if indicator_id == 'ind_27_logicfin' %}
+        <div class="logicfin-tags">
+            <span class="logicfin-tag">多源情报融合</span>
+            <span class="logicfin-tag">资金结构研判</span>
+            <span class="logicfin-tag">策略执行映射</span>
+            <span class="logicfin-tag">决策链路可解释</span>
+        </div>
+        {% endif %}
+        {% if meta.slow %}
+        <div class="warning-box">此指标计算较慢，请耐心等待</div>
+        {% endif %}
+        {% if meta.requires_db %}
+        <div class="info-box">此指标需要本地数据库支持，请确保数据库已更新</div>
+        {% endif %}
+    </div>
+
+    <!-- 参数输入区 -->
+    <div class="input-card{% if indicator_id == 'ind_27_logicfin' %} logicfin-input-card{% endif %}">
+        <div class="input-section">
+            {% if meta.input_type == 'query' %}
+            <div class="input-group" style="flex:1; min-width:400px;">
+                <label for="query_input">请输入您的投资问题</label>
+                <input type="text" id="query_input" value="{{ meta.default_query }}"
+                       placeholder="如：请帮我分析一下贵州茅台，是否值得投资？"
+                       style="width:100%;">
+            </div>
+            {% else %}
+            {% if meta.input_type in ['stock', 'index'] %}
+            <div class="input-group">
+                <label for="ts_code">
+                    {% if meta.input_type == 'stock' %}股票代码{% else %}指数代码{% endif %}
+                </label>
+                <input type="text" id="ts_code" value="{{ meta.default_code }}"
+                       placeholder="{% if meta.input_type == 'stock' %}如 600425.SH{% else %}如 000001.SH{% endif %}">
+            </div>
+            {% endif %}
+
+            <div class="input-group">
+                <label for="start_date">起始日期</label>
+                <select id="start_date">
+                    <option value="20150101" selected>2015年</option>
+                    <option value="20160101">2016年</option>
+                    <option value="20170101">2017年</option>
+                    <option value="20180101">2018年</option>
+                    <option value="20190101">2019年</option>
+                    <option value="20200101">2020年</option>
+                    <option value="20210101">2021年</option>
+                    <option value="20220101">2022年</option>
+                    <option value="20230101">2023年</option>
+                    <option value="20240101">2024年</option>
+                    <option value="20250101">2025年</option>
+                    <option value="20260101">2026年</option>
+                </select>
+            </div>
+            {% endif %}
+
+            <button id="btn-compute" class="btn btn-primary" onclick="computeIndicator()">
+                开始计算
+            </button>
+        </div>
+    </div>
+
+    <!-- 进度条 -->
+    <div id="progress-section" class="progress-section{% if indicator_id == 'ind_27_logicfin' %} logicfin-progress{% endif %}" style="display:none;">
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        </div>
+        <p class="progress-text" id="progress-text">准备中...</p>
+    </div>
+
+    <!-- 图表展示区 -->
+    <div id="charts-section" class="charts-section{% if indicator_id == 'ind_27_logicfin' %} logicfin-charts{% endif %}"></div>
+
+    <!-- Qwen AI 对话区 -->
+    <div id="chat-section" class="chat-section" style="display:none;">
+        <div class="chat-header">
+            <h3>🤖 Qwen AI 分析</h3>
+            <button class="btn btn-sm" onclick="analyzeAllCharts()">分析全部图表</button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="请输入问题，如：当前指标有什么信号？"
+                   onkeypress="if(event.key==='Enter')sendChat()">
+            <button class="btn btn-primary" onclick="sendChat()">发送</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const INDICATOR_ID = '{{ indicator_id }}';
+    const META = {{ meta | tojson }};
+    let currentTaskId = null;
+    let currentChartPaths = [];
+    let chatHistory = [];
+</script>
+{% endblock %}
