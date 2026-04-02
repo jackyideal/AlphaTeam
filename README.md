@@ -34,7 +34,7 @@ AlphaTeam 旨在解决传统 AI 投研中“流程黑盒、责任不清、不可
 
 ---
 
-## 🎬 Demo 展示 (Demo Preview)
+## 🎬 可视化展示 (Demo Preview)
 
 以下为 AlphaTeam 的实际运行界面示意（含可视化协作与分析工作台）：
 
