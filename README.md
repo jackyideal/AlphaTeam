@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="AlphaTeam Logo" width="160" />
+  <img src="docs/assets/logo.png" alt="AlphaTeam Logo" width="200" />
 </p>
 
 <h1 align="center">AlphaTeam</h1>
