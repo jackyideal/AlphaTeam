@@ -4,6 +4,10 @@
 
 <h1 align="center">AlphaTeam</h1>
 
+<p align="center">
+  <a href="./README.md"><strong>中文</strong></a> | <a href="./README_EN.md">English</a>
+</p>
+
 > **构建资本市场可信、可控、可回溯的量化投研开放架构**
 > *A Trustworthy, Controllable, and Traceable Framework for Financial Intelligence.*
 
@@ -27,6 +31,14 @@ AlphaTeam 旨在解决传统 AI 投研中“流程黑盒、责任不清、不可
 | **🎮 可控 (Controllable)** | 引入**反方审计** 与风险复核机制，确保每一项投资建议都经过严苛的逻辑挑战。 |
 | **🔍 可回溯 (Traceable)** | 全链路流程与记忆中心，每一秒的决策依据、工具调用和原始数据均可审计还原。 |
 | **🧬 可进化 (Evolving)** | 深度适配 **A-share first** 约束场景，支持多智能体在复杂实战反馈中实现自我进化与迭代。 |
+
+---
+
+## 🎬 Demo 展示 (Demo Preview)
+
+以下为 AlphaTeam 的实际运行界面示意（含可视化协作与分析工作台）：
+
+![AlphaTeam Demo](docs/assets/demo.png)
 
 ---
 
