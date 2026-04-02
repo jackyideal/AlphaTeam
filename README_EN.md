@@ -11,6 +11,14 @@
 > **Building a trustworthy, controllable, and traceable open architecture for quantitative investment research in capital markets**
 > *A Trustworthy, Controllable, and Traceable Framework for Financial Intelligence.*
 
+## 📖 Background & Lineage
+
+AlphaTeam is the industrial-grade evolution of our previous academic open-source project, **[AlphaFin](https://github.com/AlphaFin-proj/AlphaFin)**.
+
+* **[AlphaFin](https://github.com/AlphaFin-proj/AlphaFin) (Predecessor):** Focused on the construction of high-quality financial datasets, LLM fine-tuning, retrieval augmentation, and preliminary explorations into single-agent chain-of-logic reasoning. It was designed to address the foundational challenges of financial data timeliness and computational complexity.
+
+* **AlphaTeam:** Building upon the financial intuition and data foundation established by AlphaFin, this project comprehensively upgrades to an architecture of **Multi-Agent Collaboration** and **Systematic Engineering Governance**. It marks the definitive leap from "heuristic single-agent Q&A" to a "trustworthy, controllable, and evolvable quantitative research framework."
+
 ---
 
 ## 💡 Core Philosophy
