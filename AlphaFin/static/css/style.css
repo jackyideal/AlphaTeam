@@ -3130,6 +3130,13 @@ body {
     background: linear-gradient(135deg, #e8f1ff 0%, #eaf8f3 100%);
 }
 
+.home-v2-module-icon-img {
+    width: 58px;
+    height: 58px;
+    object-fit: contain;
+    display: block;
+}
+
 .home-v2-module-icon-empty {
     visibility: hidden;
 }

@@ -1,0 +1,24 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="18" y1="20" x2="110" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="34" y1="24" x2="92" y2="102" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E8F1FF"/>
+      <stop offset="1" stop-color="#EAF8F3"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#g2)"/>
+  <path d="M34 36L64 22L94 36V64L64 80L34 64V36Z" stroke="url(#g1)" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M64 80V106" stroke="url(#g1)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M94 36L106 52" stroke="url(#g1)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M34 36L22 52" stroke="url(#g1)" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="22" r="10" fill="#3B82F6"/>
+  <circle cx="94" cy="36" r="9" fill="#10B981"/>
+  <circle cx="34" cy="36" r="9" fill="#10B981"/>
+  <circle cx="22" cy="52" r="8" fill="#3B82F6"/>
+  <circle cx="106" cy="52" r="8" fill="#3B82F6"/>
+  <circle cx="64" cy="106" r="10" fill="#10B981"/>
+  <circle cx="64" cy="80" r="11" fill="white" stroke="url(#g1)" stroke-width="5"/>
+</svg>
