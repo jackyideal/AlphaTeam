@@ -103,12 +103,6 @@
                     <span class="group-chevron">▾</span>
                 </button>
                 <div class="group-content">
-                    {% if group_name == '市场结构指标' %}
-                    <a href="/market_hub" class="sidebar-item {% if request.path == '/market_hub' %}active{% endif %}"
-                       title="市场顶底指标与铜油比综合观察页面">
-                        🚀 市场顶底指标
-                    </a>
-                    {% endif %}
                     {% for meta in indicators %}
                     <a href="/indicator/{{ meta.id }}"
                        class="sidebar-item {% if indicator_id is defined and indicator_id == meta.id %}active{% endif %}"
