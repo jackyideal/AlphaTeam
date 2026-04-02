@@ -35,7 +35,7 @@ AlphaTeam addresses key pain points of traditional AI research systems: black-bo
 ## 🚀 Key Features
 
 | Feature | Description |
-| :--- | :--- |
+| :------- | :--- |
 | **🛡️ Reliable** | A causal hypothesis-chain reasoning pattern enforces strict evidence-to-conclusion mapping to reduce hallucinations at the logic level. |
 | **🎮 Controllable** | Built-in **adversarial audit** and risk re-check mechanisms challenge every investment conclusion under rigorous logic constraints. |
 | **🔍 Traceable** | Full-chain **Activity Stream** plus memory center allows audit reconstruction of decision basis, tool calls, and source data. |
