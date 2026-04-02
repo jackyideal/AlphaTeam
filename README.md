@@ -2,63 +2,81 @@
 
 > A multi-agent open architecture for stock research and decision support.
 
-AlphaTeam 是一个面向股票投研场景的开源系统架构，强调“可组合智能体 + 可追踪流程编排 + 可控工具调用”，用于支持研究、讨论、风控、复核与组合管理等协作流程。
+AlphaTeam 是一个面向股票投研的开源系统架构（Open Research Architecture）。项目以 `A-share first` 为约束场景，围绕“可信、可控、可回溯、可进化”的系统目标，构建多智能体协作、工具治理、记忆检索和可视化工作流的一体化实现。
 
 ## Abstract
 
-传统投研系统通常在“单模型问答”与“固定规则引擎”之间二选一。AlphaTeam 的目标不是替代研究员判断，而是提供一个可扩展的协作式架构：
+金融市场天然具有高噪声、非平稳、多源异构等特征。传统单模型问答架构在工程效率上有优势，但在复杂投研任务中常面临以下问题：流程黑盒、责任边界不清、工具调用不可审计、结论难以回溯。AlphaTeam 采用流程编排优先（orchestration-first）的方法，将研究、情报、风控、审计、量化等职责分离，并通过活动流、Trace、记忆中心与工具审查机制，使研究过程从“只看结果”转向“过程可解释、动作可约束、状态可追踪”。
 
-- 通过 `orchestrator` 将复杂任务分解为可执行流程。
-- 通过角色化智能体将研究、风控、审计等职责解耦。
-- 通过统一工具注册与审计机制约束模型的外部动作。
-- 通过会话状态、记忆系统与活动流实现全过程可观测。
+在方法论上，AlphaTeam 鼓励智能体输出“因果假设链”和“证据-结论对应关系”，并通过反方审计与风险复核提高推理稳健性。项目目标不是替代投资判断，而是为研究团队提供可扩展、可验证的系统底座。
 
-该仓库当前聚焦 `A-share first` 的应用环境，优先保证中国市场数据链路、时钟语义与策略语境的一致性。
+## Architecture at a Glance
 
-## Research Positioning
+```mermaid
+flowchart LR
+    U[User / Researcher] --> UI["Team Workspace<br/>/team"]
+    UI --> O[Orchestrator]
+    O --> C["Coordinator<br/>(director)"]
 
-AlphaTeam 是一个开源股票投研架构（Open Research Architecture），不是单一策略模型仓库，也不是纯 UI 项目。项目核心交付物是系统方法学与可运行实现，包括：
+    C --> A["Fundamental Researcher<br/>(analyst)"]
+    C --> I["Market Intelligence Researcher<br/>(intel)"]
+    C --> Q["Quantitative Researcher<br/>(quant)"]
+    C --> R["Risk Reviewer<br/>(risk)"]
+    C --> AU["Audit Reviewer<br/>(auditor)"]
+    C --> S["Special Situations Researcher<br/>(restructuring)"]
 
-- 协作编排机制（任务分配、讨论、汇总、风控复核）。
-- 智能体运行时机制（角色边界、模型路由、停止控制）。
-- 工具治理机制（可见目录、源码透明、风险审查）。
-- 组合运行机制（初始化、周期调度、盯盘流程）。
+    A --> T[Tool Registry]
+    I --> T
+    Q --> T
+    R --> T
+    AU --> T
+    S --> T
+
+    T --> D[(A-share Data + External APIs)]
+    A --> M[(Memory System)]
+    I --> M
+    Q --> M
+    R --> M
+    AU --> M
+    S --> M
+
+    O --> G["Activity Stream / Trace / Reports"]
+    G --> UI
+```
+
+## Why This is Different from Traditional Architectures
+
+| 维度 | 传统单模型/规则式架构 | AlphaTeam |
+|---|---|---|
+| 执行范式 | 单体推理或静态规则链 | 多角色协作 + 编排器驱动 |
+| 可控性 | 难以一键中止与全局调度 | 支持模块启停与 `stop_all_work` |
+| 可回溯性 | 常见“结果可见，过程不可见” | 支持活动流、Trace、报告归档 |
+| 记忆透明度 | 记忆机制常不可视 | 提供 `memory_center` 可视化接口 |
+| 工具可信度 | 工具调用审计弱 | 提供工具目录、源码查看、审查接口 |
+| 可视化程度 | 多为文本面板 | 3D 工作流场景 + 实时状态展示 |
+| 架构演进 | 插件扩展成本高 | 角色、工具、技能均可扩展 |
+
+## Role Taxonomy (Academic Naming)
+
+| Runtime ID | Runtime Name | Academic Role |
+|---|---|---|
+| `director` | 决策总监 | Coordinator |
+| `analyst` | 投资分析师 | Fundamental Researcher |
+| `intel` | 市场情报员 | Market Intelligence Researcher |
+| `quant` | 量化策略师 | Quantitative Researcher |
+| `risk` | 风控官 | Risk Reviewer |
+| `auditor` | 反思审计员 | Audit Reviewer |
+| `restructuring` | 资产重组专家 | Special Situations Researcher |
 
 ## Architecture Spec
 
-### 1) Design Principles
+完整规格文档见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。以下为摘要：
 
-- Role Decomposition: 将“研究、判断、风控、复盘”拆分为独立职责。
-- Orchestration First: 先定义流程，再调用模型，避免无结构对话。
-- Observable by Default: 所有关键动作进入统一活动流与可追踪状态。
-- Tool Governance: 工具默认显式注册、审计可见、权限边界清晰。
-- A-share Constraint Awareness: 交易时段、T+1 与本地数据链路优先。
-
-### 2) Layered System View
-
-- Interface Layer
-  - Web App 与 Team Workspace 页面。
-  - 3D 协作场景、活动时间线、配置与诊断面板。
-- Orchestration Layer
-  - `orchestrator` 负责研究流程调度与会话编排。
-  - `portfolio_scheduler` 负责投资周期与盘中盯盘调度。
-- Agent Runtime Layer
-  - 角色化智能体执行具体任务并协作交互。
-  - `agent_registry` 统一管理模型配置、状态与停止控制。
-- Tool and Data Layer
-  - `tool_registry` 管理工具注册、参数模式与执行入口。
-  - 数据更新与构建脚本负责本地数据库可复现初始化。
-- Memory and Governance Layer
-  - 记忆系统、活动总线、会话控制、报告归档与工具审计接口。
-
-### 3) Request Lifecycle (User Ask)
-
-1. 用户在 `/team` 提交研究问题。
-2. 编排器根据工作流决定直连回答或多智能体协作。
-3. 智能体调用工具与上下文，逐步生成阶段性结论。
-4. 风控/审计角色执行校验与补充说明。
-5. 总监角色生成汇总回复，并写入活动流与可追踪状态。
-6. 用户可继续追问、评分反馈或终止当前流程。
+- Orchestration Layer: `orchestrator` 与 `portfolio_scheduler` 驱动研究与组合周期。
+- Agent Runtime Layer: `agent_registry` 管理角色模型路由、状态与停止控制。
+- Tool and Data Layer: `tool_registry` 约束工具调用入口与参数模式。
+- Memory and Governance Layer: 记忆系统、活动总线、Trace、工具审计共同构成治理闭环。
+- Interface Layer: `/team` 统一交互与可视化入口，支持 3D 协作场景。
 
 ## Core Modules
 
@@ -115,22 +133,24 @@ python3 -m AlphaFin.scripts.build_db --mode full --include-fina
 
 ## A-share First Constraints
 
-该项目当前优先面向 A 股投研流程，默认强调以下约束：
+当前版本优先服务 A 股投研语境：
 
-- 中国市场时钟语义与交易时段判断。
-- 本地数据构建与更新链路可控。
-- 投研场景中的风控与复核角色优先。
+- 中国市场时钟语义与交易时段约束。
+- 本地数据链路可控、可重建。
+- 风控与复核环节默认前置。
 
-项目并不排斥扩展到其他市场，但相关数据适配与规则语义需由社区补充。
+项目可扩展至其他市场，但需要新增数据适配、时钟规则与交易语义层。
 
-## 3D Workspace Reproduction
+## Observability and Governance APIs
 
-`/team` 页面的 3D 协作场景依赖：
-
-- `AlphaFin/ai_team/static/js/three_scene.js`
-- Three.js ES Module（通过 `importmap` 从 jsDelivr 加载）
-
-因此默认配置下需可访问 CDN。ECharts/Marked 也使用 CDN 分发。
+| 能力 | API |
+|---|---|
+| 活动流（SSE） | `/api/team/activity` |
+| 运行链路 Trace | `/api/team/trace/runs`, `/api/team/trace/<run_id>` |
+| 记忆中心 | `/api/team/memory_center` |
+| 工具目录与源码审查 | `/api/team/tools_audit/catalog`, `/api/team/tools_audit/source`, `/api/team/tools_audit/review` |
+| 生命周期控制 | `/api/team/module/start`, `/api/team/module/stop`, `/api/team/stop_all_work` |
+| 超时治理 | `/api/team/session/<session_id>/overtime` |
 
 ## Security and Data Governance
 
