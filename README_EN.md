@@ -138,7 +138,7 @@ Configure environment variables (see `.env.example`), at least:
 - `SECRET_KEY`
 - `TUSHARE_TOKEN`
 - `QWEN_API_KEY`
-- `MOONSHOT_API_KEY` (recommended for web-search workflow)
+- `MOONSHOT_API_KEY` 
 
 Start service:
 
