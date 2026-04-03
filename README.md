@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="AlphaTeam Logo" width="400" />
+  <img src="docs/assets/logo.png" alt="AlphaTeam Logo" width="500" />
 </p>
 
-<h1 align="center">AlphaTeam</h1>
+<!-- <h1 align="center">AlphaTeam</h1> -->
 
 <p align="center">
   <a href="./README.md"><strong>中文</strong></a> | <a href="./README_EN.md">English</a>
