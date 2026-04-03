@@ -9,7 +9,7 @@
 </p>
 
 > **构建资本市场可信、可控、可回溯的量化投研开放架构**
-> *A Trustworthy, Controllable, and Traceable Framework for Financial Intelligence.*
+> *A Trustworthy, Controllable, and Traceable Platform for Financial Intelligence.*
 
 ---
 
