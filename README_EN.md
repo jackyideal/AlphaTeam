@@ -198,7 +198,7 @@ If you use AlphaTeam in research or engineering, please cite as software:
 
 ```bibtex
 @software{alphateam2026,
-  title   = {AlphaTeam: A Multi-Agent Open Architecture for Stock Research and Decision Support},
+  title   = {AlphaTeam: Trustworthy, Controllable, and Traceable Quantitative Trading PlatForm},
   author  = {AlphaTeam Contributors},
   year    = {2026},
   url     = {https://github.com/jackyideal/AlphaTeam}
