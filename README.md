@@ -199,7 +199,7 @@ python3 -m AlphaFin.scripts.build_db --mode full --include-fina
 
 ```bibtex
 @software{alphateam2026,
-  title   = {AlphaTeam: A Multi-Agent Open Architecture for Stock Research and Decision Support},
+  title   = {AlphaTeam: Trustworthy, Controllable, and Traceable Quantitative Trading PlatForm},
   author  = {AlphaTeam Contributors},
   year    = {2026},
   url     = {https://github.com/jackyideal/AlphaTeam}
